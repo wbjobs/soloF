@@ -1,0 +1,131 @@
+.jp-NetCDFViewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
+  overflow: hidden;
+}
+
+.jp-NetCDFViewer-header {
+  padding: 12px;
+  background: var(--jp-layout-color1);
+  border-bottom: var(--jp-border-width) solid var(--jp-border-color1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jp-NetCDFViewer-title {
+  font-size: var(--jp-ui-font-size1);
+  font-weight: 600;
+  margin: 0;
+}
+
+.jp-NetCDFViewer-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.jp-NetCDFViewer-controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jp-NetCDFViewer-controlGroup label {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color1);
+}
+
+.jp-NetCDFViewer-controlGroup select,
+.jp-NetCDFViewer-controlGroup input {
+  padding: 4px 8px;
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+  border-radius: 4px;
+  background: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jp-NetCDFViewer-info {
+  padding: 8px 12px;
+  background: var(--jp-layout-color1);
+  border-bottom: var(--jp-border-width) solid var(--jp-border-color1);
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color1);
+}
+
+.jp-NetCDFViewer-plotContainer {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  position: relative;
+}
+
+.jp-NetCDFViewer-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--jp-ui-font-size1);
+  color: var(--jp-ui-font-color1);
+}
+
+.jp-NetCDFViewer-error {
+  padding: 20px;
+  color: var(--jp-error-color0);
+  background: var(--jp-error-color3);
+  border: var(--jp-border-width) solid var(--jp-error-color1);
+  border-radius: 4px;
+  margin: 20px;
+}
+
+.jp-NetCDFViewer-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.jp-NetCDFViewer-metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jp-NetCDFViewer-metaLabel {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-NetCDFViewer-metaValue {
+  font-size: var(--jp-ui-font-size0);
+  font-weight: 500;
+}
+
+.jp-NetCDFViewer-button {
+  padding: 4px 12px;
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+  border-radius: 4px;
+  background: var(--jp-layout-color2);
+  color: var(--jp-ui-font-color0);
+  font-size: var(--jp-ui-font-size0);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.jp-NetCDFViewer-button:hover {
+  background: var(--jp-layout-color3);
+}
+
+.jp-NetCDFViewer-controlGroup span {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color1);
+}
+
+.jp-NetCDFViewer-controlGroup input[type="number"] {
+  width: 70px;
+}
