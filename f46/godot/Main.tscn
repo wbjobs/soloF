@@ -1,0 +1,516 @@
+[gd_scene load_steps=4 format=3 uid="uid://dungeon_generator_main"]
+
+[ext_resource type="Script" path="res://scripts/DungeonManager.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/UIPanel.gd" id="2"]
+[ext_resource type="TileSet" path="res://tiles/tileset.tres" id="3"]
+
+[node name="Main" type="Node2D"]
+
+[node name="DungeonManager" type="Node2D" parent="."]
+script = ExtResource("1")
+
+[node name="TileMap" type="TileMap" parent="DungeonManager"]
+tile_set = ExtResource("3")
+
+[node name="HttpRequest" type="HttpRequest" parent="DungeonManager"]
+
+[node name="UIPanel" type="Control" parent="."]
+script = ExtResource("2")
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 320.0
+offset_bottom = 800.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UIPanel"]
+offset_right = 310.0
+offset_bottom = 790.0
+
+[node name="TitleLabel" type="Label" parent="UIPanel/VBoxContainer"]
+offset_right = 310.0
+offset_bottom = 40.0
+text = "地牢生成器"
+horizontal_alignment = 1
+add_theme_font_size_override("font_size", 24)
+
+[node name="HSeparator" type="HSeparator" parent="UIPanel/VBoxContainer"]
+offset_top = 45.0
+offset_right = 310.0
+offset_bottom = 55.0
+
+[node name="MethodContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer"]
+offset_top = 60.0
+offset_right = 310.0
+offset_bottom = 90.0
+
+[node name="MethodLabel" type="Label" parent="UIPanel/VBoxContainer/MethodContainer"]
+offset_right = 100.0
+offset_bottom = 30.0
+text = "生成方法:"
+
+[node name="MethodOption" type="OptionButton" parent="UIPanel/VBoxContainer/MethodContainer"]
+offset_left = 105.0
+offset_right = 310.0
+offset_bottom = 30.0
+
+[node name="SizeContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer"]
+offset_top = 95.0
+offset_right = 310.0
+offset_bottom = 125.0
+
+[node name="WidthLabel" type="Label" parent="UIPanel/VBoxContainer/SizeContainer"]
+offset_right = 50.0
+offset_bottom = 30.0
+text = "宽度:"
+
+[node name="WidthSpin" type="SpinBox" parent="UIPanel/VBoxContainer/SizeContainer"]
+offset_left = 55.0
+offset_right = 150.0
+offset_bottom = 30.0
+min_value = 20.0
+max_value = 200.0
+value = 80.0
+
+[node name="HeightLabel" type="Label" parent="UIPanel/VBoxContainer/SizeContainer"]
+offset_left = 155.0
+offset_right = 205.0
+offset_bottom = 30.0
+text = "高度:"
+
+[node name="HeightSpin" type="SpinBox" parent="UIPanel/VBoxContainer/SizeContainer"]
+offset_left = 210.0
+offset_right = 310.0
+offset_bottom = 30.0
+min_value = 20.0
+max_value = 200.0
+value = 60.0
+
+[node name="SeedContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer"]
+offset_top = 130.0
+offset_right = 310.0
+offset_bottom = 160.0
+
+[node name="UseSeedCheck" type="CheckBox" parent="UIPanel/VBoxContainer/SeedContainer"]
+offset_right = 80.0
+offset_bottom = 30.0
+text = "使用种子"
+
+[node name="SeedSpin" type="SpinBox" parent="UIPanel/VBoxContainer/SeedContainer"]
+offset_left = 85.0
+offset_right = 310.0
+offset_bottom = 30.0
+min_value = 0.0
+max_value = 999999.0
+editable = false
+
+[node name="ConnectivityContainer" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+offset_top = 165.0
+offset_right = 310.0
+offset_bottom = 245.0
+
+[node name="ConnectivityLabel" type="Label" parent="UIPanel/VBoxContainer/ConnectivityContainer"]
+offset_right = 310.0
+offset_bottom = 20.0
+text = "连通性设置"
+horizontal_alignment = 1
+
+[node name="EnsureConnectedCheck" type="CheckBox" parent="UIPanel/VBoxContainer/ConnectivityContainer"]
+offset_top = 25.0
+offset_right = 310.0
+offset_bottom = 50.0
+text = "确保连通（自动打通孤岛）"
+pressed = true
+
+[node name="MinRegionSizeContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer/ConnectivityContainer"]
+offset_top = 55.0
+offset_right = 310.0
+offset_bottom = 85.0
+
+[node name="MinRegionSizeLabel" type="Label" parent="UIPanel/VBoxContainer/ConnectivityContainer/MinRegionSizeContainer"]
+offset_right = 120.0
+offset_bottom = 30.0
+text = "最小区域大小:"
+
+[node name="MinRegionSizeSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ConnectivityContainer/MinRegionSizeContainer"]
+offset_left = 125.0
+offset_right = 310.0
+offset_bottom = 30.0
+min_value = 5.0
+max_value = 100.0
+value = 20.0
+
+[node name="ConnectCorridorWidthContainer" type="HBoxContainer" parent="UIPanel/VBoxContainer/ConnectivityContainer"]
+offset_top = 90.0
+offset_right = 310.0
+offset_bottom = 120.0
+
+[node name="ConnectCorridorWidthLabel" type="Label" parent="UIPanel/VBoxContainer/ConnectivityContainer/ConnectCorridorWidthContainer"]
+offset_right = 120.0
+offset_bottom = 30.0
+text = "连接走廊宽度:"
+
+[node name="ConnectCorridorWidthSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ConnectivityContainer/ConnectCorridorWidthContainer"]
+offset_left = 125.0
+offset_right = 310.0
+offset_bottom = 30.0
+min_value = 1.0
+max_value = 5.0
+value = 2.0
+
+[node name="HSeparator2" type="HSeparator" parent="UIPanel/VBoxContainer"]
+offset_top = 250.0
+offset_right = 310.0
+offset_bottom = 260.0
+
+[node name="ParamsLabel" type="Label" parent="UIPanel/VBoxContainer"]
+offset_top = 265.0
+offset_right = 310.0
+offset_bottom = 200.0
+text = "参数设置"
+horizontal_alignment = 1
+add_theme_font_size_override("font_size", 16)
+
+[node name="ParamsContainer" type="VBoxContainer" parent="UIPanel/VBoxContainer"]
+offset_top = 290.0
+offset_right = 310.0
+offset_bottom = 665.0
+
+[node name="CellularParams" type="VBoxContainer" parent="UIPanel/VBoxContainer/ParamsContainer"]
+offset_right = 310.0
+offset_bottom = 150.0
+
+[node name="FillProbabilityLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_right = 310.0
+offset_bottom = 20.0
+text = "填充概率: 0.45"
+
+[node name="FillProbabilitySlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 25.0
+offset_right = 310.0
+offset_bottom = 45.0
+min_value = 0.1
+max_value = 0.9
+value = 0.45
+step = 0.01
+
+[node name="IterationsLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 50.0
+offset_right = 310.0
+offset_bottom = 70.0
+text = "迭代次数: 5"
+
+[node name="IterationsSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 75.0
+offset_right = 310.0
+offset_bottom = 105.0
+min_value = 1.0
+max_value = 20.0
+value = 5.0
+
+[node name="BirthLimitLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 110.0
+offset_right = 310.0
+offset_bottom = 130.0
+text = "出生阈值: 4"
+
+[node name="BirthLimitSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 135.0
+offset_right = 310.0
+offset_bottom = 165.0
+min_value = 1.0
+max_value = 8.0
+value = 4.0
+
+[node name="DeathLimitLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 170.0
+offset_right = 310.0
+offset_bottom = 190.0
+text = "死亡阈值: 3"
+
+[node name="DeathLimitSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/CellularParams"]
+offset_top = 195.0
+offset_right = 310.0
+offset_bottom = 225.0
+min_value = 1.0
+max_value = 8.0
+value = 3.0
+
+[node name="RoomsParams" type="VBoxContainer" parent="UIPanel/VBoxContainer/ParamsContainer"]
+offset_top = 155.0
+offset_right = 310.0
+offset_bottom = 305.0
+visible = false
+
+[node name="RoomMinLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_right = 310.0
+offset_bottom = 20.0
+text = "最小房间尺寸: 5"
+
+[node name="RoomMinSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 25.0
+offset_right = 310.0
+offset_bottom = 55.0
+min_value = 3.0
+max_value = 20.0
+value = 5.0
+
+[node name="RoomMaxLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 60.0
+offset_right = 310.0
+offset_bottom = 80.0
+text = "最大房间尺寸: 12"
+
+[node name="RoomMaxSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 85.0
+offset_right = 310.0
+offset_bottom = 115.0
+min_value = 5.0
+max_value = 30.0
+value = 12.0
+
+[node name="NumRoomsLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 120.0
+offset_right = 310.0
+offset_bottom = 140.0
+text = "房间数量: 15"
+
+[node name="NumRoomsSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 145.0
+offset_right = 310.0
+offset_bottom = 175.0
+min_value = 5.0
+max_value = 50.0
+value = 15.0
+
+[node name="CorridorWidthLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 180.0
+offset_right = 310.0
+offset_bottom = 200.0
+text = "走廊宽度: 2"
+
+[node name="CorridorWidthSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/RoomsParams"]
+offset_top = 205.0
+offset_right = 310.0
+offset_bottom = 235.0
+min_value = 1.0
+max_value = 5.0
+value = 2.0
+
+[node name="NoiseParams" type="VBoxContainer" parent="UIPanel/VBoxContainer/ParamsContainer"]
+offset_top = 310.0
+offset_right = 310.0
+offset_bottom = 460.0
+visible = false
+
+[node name="ScaleLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_right = 310.0
+offset_bottom = 20.0
+text = "噪声缩放: 10.0"
+
+[node name="ScaleSlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 25.0
+offset_right = 310.0
+offset_bottom = 45.0
+min_value = 2.0
+max_value = 50.0
+value = 10.0
+step = 0.5
+
+[node name="OctavesLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 50.0
+offset_right = 310.0
+offset_bottom = 70.0
+text = "八度: 3"
+
+[node name="OctavesSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 75.0
+offset_right = 310.0
+offset_bottom = 105.0
+min_value = 1.0
+max_value = 10.0
+value = 3.0
+
+[node name="PersistenceLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 110.0
+offset_right = 310.0
+offset_bottom = 130.0
+text = "持续度: 0.5"
+
+[node name="PersistenceSlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 135.0
+offset_right = 310.0
+offset_bottom = 155.0
+min_value = 0.1
+max_value = 1.0
+value = 0.5
+step = 0.05
+
+[node name="LacunarityLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 160.0
+offset_right = 310.0
+offset_bottom = 180.0
+text = "间隙度: 2.0"
+
+[node name="LacunaritySlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 185.0
+offset_right = 310.0
+offset_bottom = 205.0
+min_value = 1.0
+max_value = 4.0
+value = 2.0
+step = 0.1
+
+[node name="ThresholdLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 210.0
+offset_right = 310.0
+offset_bottom = 230.0
+text = "阈值: 0.5"
+
+[node name="ThresholdSlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/NoiseParams"]
+offset_top = 235.0
+offset_right = 310.0
+offset_bottom = 255.0
+min_value = 0.1
+max_value = 0.9
+value = 0.5
+step = 0.05
+
+[node name="HybridParams" type="VBoxContainer" parent="UIPanel/VBoxContainer/ParamsContainer"]
+offset_top = 465.0
+offset_right = 310.0
+offset_bottom = 615.0
+
+[node name="FillProbabilityLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_right = 310.0
+offset_bottom = 20.0
+text = "填充概率: 0.45"
+
+[node name="FillProbabilitySlider" type="HSlider" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 25.0
+offset_right = 310.0
+offset_bottom = 45.0
+min_value = 0.1
+max_value = 0.9
+value = 0.45
+step = 0.01
+
+[node name="CaIterationsLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 50.0
+offset_right = 310.0
+offset_bottom = 70.0
+text = "元胞迭代: 5"
+
+[node name="CaIterationsSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 75.0
+offset_right = 310.0
+offset_bottom = 105.0
+min_value = 1.0
+max_value = 20.0
+value = 5.0
+
+[node name="BirthLimitLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 110.0
+offset_right = 310.0
+offset_bottom = 130.0
+text = "出生阈值: 4"
+
+[node name="BirthLimitSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 135.0
+offset_right = 310.0
+offset_bottom = 165.0
+min_value = 1.0
+max_value = 8.0
+value = 4.0
+
+[node name="DeathLimitLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 170.0
+offset_right = 310.0
+offset_bottom = 190.0
+text = "死亡阈值: 3"
+
+[node name="DeathLimitSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 195.0
+offset_right = 310.0
+offset_bottom = 225.0
+min_value = 1.0
+max_value = 8.0
+value = 3.0
+
+[node name="RoomMinLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 230.0
+offset_right = 310.0
+offset_bottom = 250.0
+text = "最小房间: 5"
+
+[node name="RoomMinSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 255.0
+offset_right = 310.0
+offset_bottom = 285.0
+min_value = 3.0
+max_value = 20.0
+value = 5.0
+
+[node name="RoomMaxLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 290.0
+offset_right = 310.0
+offset_bottom = 310.0
+text = "最大房间: 12"
+
+[node name="RoomMaxSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 315.0
+offset_right = 310.0
+offset_bottom = 345.0
+min_value = 5.0
+max_value = 30.0
+value = 12.0
+
+[node name="NumRoomsLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 350.0
+offset_right = 310.0
+offset_bottom = 370.0
+text = "房间数量: 15"
+
+[node name="NumRoomsSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 375.0
+offset_right = 310.0
+offset_bottom = 405.0
+min_value = 5.0
+max_value = 50.0
+value = 15.0
+
+[node name="CorridorWidthLabel" type="Label" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 410.0
+offset_right = 310.0
+offset_bottom = 430.0
+text = "走廊宽度: 2"
+
+[node name="CorridorWidthSpin" type="SpinBox" parent="UIPanel/VBoxContainer/ParamsContainer/HybridParams"]
+offset_top = 435.0
+offset_right = 310.0
+offset_bottom = 465.0
+min_value = 1.0
+max_value = 5.0
+value = 2.0
+
+[node name="HSeparator3" type="HSeparator" parent="UIPanel/VBoxContainer"]
+offset_top = 670.0
+offset_right = 310.0
+offset_bottom = 680.0
+
+[node name="GenerateButton" type="Button" parent="UIPanel/VBoxContainer"]
+offset_top = 685.0
+offset_right = 310.0
+offset_bottom = 725.0
+text = "生成地牢"
+
+[node name="ClearButton" type="Button" parent="UIPanel/VBoxContainer"]
+offset_top = 730.0
+offset_right = 310.0
+offset_bottom = 770.0
+text = "清除"
+
+[node name="StatusLabel" type="Label" parent="UIPanel/VBoxContainer"]
+offset_top = 775.0
+offset_right = 310.0
+offset_bottom = 795.0
+text = "就绪"
+horizontal_alignment = 1
