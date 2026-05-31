@@ -1,0 +1,21 @@
+{
+  "name": "point-cloud-viewer",
+  "version": "1.0.0",
+  "description": "3D点云重建工具 with Octree LOD优化",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "keywords": ["point-cloud", "threejs", "octree", "lod"],
+  "author": "",
+  "license": "MIT"
+}

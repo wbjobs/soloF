@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D点云重建工具 - Octree LOD</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      overflow: hidden;
+    }
+    
+    #app {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .sidebar {
+      width: 300px;
+      background: #16213e;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid #0f3460;
+    }
+    
+    .sidebar h2 {
+      margin-bottom: 20px;
+      color: #e94560;
+      font-size: 18px;
+    }
+    
+    .sidebar-section {
+      margin-bottom: 25px;
+    }
+    
+    .sidebar-section h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #e94560;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .btn:hover {
+      background: #ff6b6b;
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: #0f3460;
+    }
+    
+    .btn-secondary:hover {
+      background: #1a4a7a;
+    }
+    
+    .stats {
+      background: #0f3460;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      color: #e94560;
+      font-weight: bold;
+    }
+    
+    .slider-container {
+      margin-bottom: 15px;
+    }
+    
+    .slider-container label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    
+    .slider-container input[type="range"] {
+      width: 100%;
+    }
+    
+    .viewport {
+      flex: 1;
+      position: relative;
+    }
+    
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .info-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .info-overlay .fps {
+      color: #4ade80;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #0f3460;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #e94560;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .annotation-status {
+      background: #1a4a7a;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    .annotation-status.active {
+      background: #059669;
+    }
+    
+    .annotation-list {
+      max-height: 250px;
+      overflow-y: auto;
+      background: #0f3460;
+      border-radius: 6px;
+      padding: 8px;
+    }
+    
+    .annotation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #16213e;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .annotation-item:hover {
+      background: #1a4a7a;
+    }
+    
+    .annotation-item.selected {
+      border: 2px solid #e94560;
+    }
+    
+    .annotation-info {
+      flex: 1;
+    }
+    
+    .annotation-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .annotation-distance {
+      color: #4ade80;
+      font-size: 12px;
+    }
+    
+    .annotation-delete {
+      background: #dc2626;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .annotation-delete:hover {
+      background: #b91c1c;
+    }
+    
+    .empty-list {
+      text-align: center;
+      color: #888;
+      padding: 20px;
+      font-size: 13px;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-small {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+    }
+    
+    .btn-success {
+      background: #059669;
+    }
+    
+    .btn-success:hover {
+      background: #047857;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="sidebar">
+      <h2>🖼️ 3D点云重建工具</h2>
+      
+      <div class="sidebar-section">
+        <h3>数据导入</h3>
+        <button class="btn" id="btn-import-files">📁 导入点云文件</button>
+        <button class="btn btn-secondary" id="btn-generate-demo">🎲 生成测试点云</button>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>点云统计</h3>
+        <div class="stats">
+          <div class="stat-row">
+            <span>总点数:</span>
+            <span class="stat-value" id="total-points">0</span>
+          </div>
+          <div class="stat-row">
+            <span>渲染点数:</span>
+            <span class="stat-value" id="rendered-points">0</span>
+          </div>
+          <div class="stat-row">
+            <span>八叉树节点:</span>
+            <span class="stat-value" id="octree-nodes">0</span>
+          </div>
+          <div class="stat-row">
+            <span>可见节点:</span>
+            <span class="stat-value" id="visible-nodes">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>LOD 设置</h3>
+        <div class="slider-container">
+          <label>LOD 距离系数: <span id="lod-distance-value">1.0</span></label>
+          <input type="range" id="lod-distance" min="0.1" max="3.0" step="0.1" value="1.0">
+        </div>
+        <div class="slider-container">
+          <label>每节点最大点数: <span id="max-points-value">50000</span></label>
+          <input type="range" id="max-points" min="10000" max="200000" step="10000" value="50000">
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="frustum-culling" checked>
+          视锥体剔除
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="show-bounding-boxes">
+          显示包围盒
+        </label>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>点云样式</h3>
+        <div class="slider-container">
+          <label>点大小: <span id="point-size-value">2.0</span></label>
+          <input type="range" id="point-size" min="0.5" max="10" step="0.5" value="2.0">
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>处理进度</h3>
+        <div id="progress-text">等待操作...</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>📏 距离标注</h3>
+        <button class="btn btn-secondary" id="btn-annotate">
+          🔴 开始标注模式
+        </button>
+        <div class="annotation-status" id="annotation-status">
+          点击点云上的两点进行测量
+        </div>
+        <div id="annotation-list" class="annotation-list">
+          <div class="empty-list">暂无标注</div>
+        </div>
+        <div class="btn-group" style="margin-top: 15px;">
+          <button class="btn btn-small btn-success" id="btn-export-csv">
+            📊 导出CSV
+          </button>
+          <button class="btn btn-small btn-success" id="btn-export-json">
+            📋 导出JSON
+          </button>
+        </div>
+        <button class="btn btn-secondary btn-small" style="width: 100%; margin-top: 8px;" id="btn-clear-annotations">
+          🗑️ 清空标注
+        </button>
+      </div>
+    </div>
+    
+    <div class="viewport">
+      <div id="canvas-container"></div>
+      <div class="info-overlay">
+        <div class="fps">FPS: <span id="fps-counter">60</span></div>
+        <div>LOD层级: <span id="lod-levels">-</span></div>
+        <div>相机距离: <span id="camera-distance">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
