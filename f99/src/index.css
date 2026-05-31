@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,500&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+@import 'highlight.js/styles/github.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: #F7F3EC;
+  color: #2A241B;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(20, 17, 12, 0.18); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(20, 17, 12, 0.32); }
+
+/* Markdown */
+.prose-notes {
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  color: #2A241B;
+  line-height: 1.7;
+  font-size: 15px;
+}
+.prose-notes h1, .prose-notes h2, .prose-notes h3,
+.prose-notes h4, .prose-notes h5, .prose-notes h6 {
+  font-family: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+  font-weight: 700;
+  margin: 1.2em 0 .6em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.prose-notes h1 { font-size: 2rem; }
+.prose-notes h2 { font-size: 1.5rem; }
+.prose-notes h3 { font-size: 1.22rem; }
+.prose-notes p { margin: .6em 0; }
+.prose-notes a { color: #1F7A5A; text-decoration: underline; text-underline-offset: 3px; }
+.prose-notes a:hover { color: #124B38; }
+.prose-notes code {
+  background: #ECE3D0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+}
+.prose-notes pre {
+  background: #14110C;
+  color: #ECE3D0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 1em 0;
+}
+.prose-notes pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.prose-notes blockquote {
+  border-left: 3px solid #1F7A5A;
+  padding-left: 14px;
+  color: #4A4236;
+  font-style: italic;
+  margin: 1em 0;
+}
+.prose-notes ul, .prose-notes ol { padding-left: 1.4em; margin: .6em 0; }
+.prose-notes li { margin: .25em 0; }
+.prose-notes table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 14px;
+}
+.prose-notes th, .prose-notes td {
+  border: 1px solid #D8C9A5;
+  padding: 6px 10px;
+  text-align: left;
+}
+.prose-notes th { background: #ECE3D0; }
+.prose-notes hr {
+  border: none;
+  border-top: 1px dashed #D8C9A5;
+  margin: 1.5em 0;
+}
+
+/* Search highlight */
+mark.hl {
+  background: #FDE68A;
+  color: #14110C;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* Textarea reset */
+textarea.editor-textarea {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: transparent;
+  color: #2A241B;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  border: none;
+  padding: 24px 28px;
+}
+
+/* Focus ring for inputs */
+input:focus, textarea:focus {
+  outline: none;
+}
+
+/* Buttons base */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200;
+}
+.btn-primary {
+  @apply bg-moss-500 text-white hover:bg-moss-600 active:bg-moss-700 shadow-soft;
+}
+.btn-secondary {
+  @apply bg-white text-ink-700 border border-ink-200 hover:border-moss-500 hover:text-moss-600;
+}
+.btn-ghost {
+  @apply text-ink-500 hover:text-moss-600 hover:bg-moss-50 rounded-full px-3 py-2;
+}
+
+/* Card */
+.card {
+  @apply bg-white rounded-2xl shadow-soft border border-ink-100;
+}
+
+/* Animated indicator */
+.sync-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #94A3B8;
+  box-shadow: 0 0 0 3px rgba(148,163,184,.15);
+}
+.sync-dot.online { background: #1F7A5A; box-shadow: 0 0 0 3px rgba(31,122,90,.2); }
+.sync-dot.syncing { background: #D97706; box-shadow: 0 0 0 3px rgba(217,119,6,.2); animation: pulse 1.2s ease-in-out infinite; }
+.sync-dot.offline { background: #94A3B8; }
+
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: .7; }
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(90deg, #ECE3D0 0%, #F7F3EC 50%, #ECE3D0 100%);
+  background-size: 400px 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 6px;
+}
