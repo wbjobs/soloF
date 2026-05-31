@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  postgres-users:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-users-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-orders:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-orders-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-products:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-products-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: graphql_analytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  users-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node services/users/index.js
+    environment:
+      PORT: 4001
+      DB_HOST: postgres-users
+      DB_PORT: 5432
+      DB_NAME: users_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  orders-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node services/orders/index.js
+    environment:
+      PORT: 4002
+      DB_HOST: postgres-orders
+      DB_PORT: 5432
+      DB_NAME: orders_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "4002:4002"
+    depends_on:
+      postgres-orders:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  products-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node services/products/index.js
+    environment:
+      PORT: 4003
+      DB_HOST: postgres-products
+      DB_PORT: 5432
+      DB_NAME: products_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "4003:4003"
+    depends_on:
+      postgres-products:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node gateway/index.js
+    environment:
+      PORT: 4000
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      USERS_DB_HOST: postgres-users
+      ORDERS_DB_HOST: postgres-orders
+      PRODUCTS_DB_HOST: postgres-products
+    ports:
+      - "4000:4000"
+    depends_on:
+      users-service:
+        condition: service_started
+      orders-service:
+        condition: service_started
+      products-service:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  postgres-users-data:
+  postgres-orders-data:
+  postgres-products-data:
+  clickhouse-data:
