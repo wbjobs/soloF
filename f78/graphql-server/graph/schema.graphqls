@@ -1,0 +1,92 @@
+type Query {
+  documents: [Document!]!
+  document(url: ID!): Document
+  techTerms: [TechTerm!]!
+  techTerm(name: ID!): TechTerm
+  graphData(limit: Int = 100): GraphData!
+  search(query: String!, limit: Int = 20): [SearchResult!]!
+  semanticSearch(query: String!, maxDepth: Int = 2, minScore: Float = 0.3): SemanticSearchResult!
+  stats: Stats!
+}
+
+type Mutation {
+  triggerCrawl(url: String!, maxDepth: Int = 3): CrawlJob!
+  clearDatabase: Boolean!
+}
+
+type Document {
+  url: ID!
+  title: String!
+  content: String
+  crawledAt: String
+  techTerms: [TechTerm!]!
+  references: [Document!]!
+  referencedBy: [Document!]!
+}
+
+type TechTerm {
+  name: ID!
+  category: String!
+  documents: [Document!]!
+  relatedTerms: [TechTerm!]!
+}
+
+type GraphData {
+  nodes: [GraphNode!]!
+  links: [GraphLink!]!
+}
+
+type GraphNode {
+  id: ID!
+  name: String!
+  category: String!
+  val: Int!
+}
+
+type GraphLink {
+  source: ID!
+  target: ID!
+  name: String!
+}
+
+type SearchResult {
+  id: ID!
+  name: String!
+  type: String!
+  category: String
+}
+
+type Stats {
+  documentCount: Int!
+  techTermCount: Int!
+  relationshipCount: Int!
+  topTerms: [TopTerm!]!
+}
+
+type TopTerm {
+  name: String!
+  count: Int!
+  category: String!
+}
+
+type CrawlJob {
+  id: ID!
+  status: String!
+  startUrl: String!
+  maxDepth: Int!
+  createdAt: String!
+}
+
+type SemanticSearchResult {
+  query: String!
+  nodes: [GraphNode!]!
+  paths: [GraphPath!]!
+  highlightedNodeIds: [ID!]!
+  highlightedLinkIds: [ID!]!
+}
+
+type GraphPath {
+  nodes: [GraphNode!]!
+  links: [GraphLink!]!
+  score: Float!
+}
