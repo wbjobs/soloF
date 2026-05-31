@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC 大文件传输</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>WebRTC 局域网大文件传输</h1>
+      <div class="connection-status">
+        <span id="status-indicator" class="status-disconnected"></span>
+        <span id="status-text">未连接</span>
+      </div>
+    </header>
+
+    <div class="connection-panel">
+      <div class="input-group">
+        <label>房间号:</label>
+        <input type="text" id="room-id" placeholder="输入房间号" value="default-room">
+        <button id="join-btn" class="btn-primary">加入房间</button>
+      </div>
+      <div class="peers-list" id="peers-list">
+        <h3>在线设备:</h3>
+        <div id="peers-container">
+          <p class="no-peers">暂无在线设备</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="target-select-panel" class="target-select-panel" style="display: none;">
+      <h3>选择接收设备:</h3>
+      <div id="target-peers-container" class="target-peers-container">
+      </div>
+      <div class="speed-control">
+        <label>传输速度限制:</label>
+        <select id="speed-limit">
+          <option value="0">无限制</option>
+          <option value="1">1 MB/s</option>
+          <option value="5">5 MB/s</option>
+          <option value="10">10 MB/s</option>
+          <option value="25">25 MB/s</option>
+          <option value="50">50 MB/s</option>
+          <option value="100">100 MB/s</option>
+        </select>
+      </div>
+      <button id="select-all-btn" class="btn-secondary">全选</button>
+      <button id="deselect-all-btn" class="btn-secondary">取消全选</button>
+    </div>
+
+    <div class="main-content">
+      <div class="file-section">
+        <h2>发送文件</h2>
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-zone-content">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>拖拽文件到此处或点击选择文件</p>
+            <p class="file-limit">最大支持 10GB 文件</p>
+          </div>
+          <input type="file" id="file-input" style="display: none;">
+        </div>
+        
+        <div id="selected-file" class="selected-file" style="display: none;">
+          <div class="file-info">
+            <span id="file-name"></span>
+            <span id="file-size"></span>
+          </div>
+          <button id="send-btn" class="btn-primary" disabled>发送文件</button>
+        </div>
+      </div>
+
+      <div class="transfer-section">
+        <h2>传输状态</h2>
+        <div id="transfer-list" class="transfer-list">
+          <p class="no-transfer">暂无传输任务</p>
+        </div>
+      </div>
+
+      <div class="receive-section">
+        <h2>可接收文件</h2>
+        <div id="available-files" class="available-files">
+          <p class="no-files">暂无可用文件</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="transfer-modal" class="modal" style="display: none;">
+      <div class="modal-content large-modal">
+        <h2>多设备文件传输</h2>
+        <div id="modal-file-info"></div>
+        <div id="multi-transfer-container" class="multi-transfer-container">
+        </div>
+        <div class="modal-actions">
+          <button id="pause-all-btn" class="btn-secondary">全部暂停</button>
+          <button id="resume-all-btn" class="btn-secondary">全部继续</button>
+          <button id="cancel-transfer" class="btn-secondary">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    if (typeof io === 'undefined') {
+      document.write('<script src="http://localhost:3000/socket.io/socket.io.js"><\/script>');
+    }
+  </script>
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "webrtc-file-transfer",
+  "version": "1.0.0",
+  "description": "局域网大文件分片传输工具",
+  "main": "main.js",
+  "scripts": {
+    "start": "concurrently \"node server.js\" \"electron .\"",
+    "server": "node server.js",
+    "electron": "electron .",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["webrtc", "electron", "file-transfer"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "socket.io": "^4.7.2",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
