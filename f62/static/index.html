@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFT 图像处理工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e4e4e7;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .drop-zone {
+            border: 2px dashed #6366f1;
+            border-radius: 12px;
+            padding: 50px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .drop-zone-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone-text {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-hint {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .controls-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .controls-section.active {
+            display: block;
+        }
+
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .slider-label h3 {
+            font-size: 1.1rem;
+            color: #e2e8f0;
+        }
+
+        .cutoff-value {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        .slider-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .filter-mode-container {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-title {
+            font-size: 1.1rem;
+            color: #e2e8f0;
+            margin-bottom: 15px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 12px 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .radio-label:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .radio-label input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .radio-label input[type="radio"]:checked + .radio-custom {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-color: #7c3aed;
+        }
+
+        .radio-label input[type="radio"]:checked + .radio-custom::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .radio-label input[type="radio"]:checked ~ .radio-text {
+            color: #a5b4fc;
+        }
+
+        .radio-label:has(input[type="radio"]:checked) {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .radio-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #64748b;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .radio-custom::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .radio-text {
+            font-size: 1rem;
+            color: #cbd5e1;
+            transition: color 0.3s ease;
+        }
+
+        .images-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            display: none;
+        }
+
+        .images-section.active {
+            display: grid;
+        }
+
+        .image-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .image-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .image-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .icon-original {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .icon-spectrum {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .icon-filtered {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 8px;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+        }
+
+        .status-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔮 FFT 图像处理工具</h1>
+            <p class="subtitle">基于 WebAssembly 的频域图像处理 - 低通/高通滤波器演示</p>
+        </header>
+
+        <section class="upload-section">
+            <label for="file-input" class="drop-zone" id="drop-zone">
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">点击或拖拽图片到此处上传</div>
+                <div class="drop-zone-hint">支持 JPG, PNG, GIF, BMP 格式</div>
+                <input type="file" id="file-input" accept="image/*">
+            </label>
+            <div class="status-message" id="status-message"></div>
+        </section>
+
+        <section class="controls-section" id="controls-section">
+            <div class="filter-mode-container">
+                <h3 class="mode-title">🔧 滤波模式</h3>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="filter-mode" value="lowpass" checked>
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">低通滤波 (模糊/去噪)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="filter-mode" value="highpass">
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">高通滤波 (边缘提取)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <h3 id="slider-title">🎚️ 截止频率</h3>
+                    <span class="cutoff-value" id="cutoff-value">0.50</span>
+                </div>
+                <input type="range" id="cutoff-slider" min="0.01" max="1.0" step="0.01" value="0.5">
+                <div class="slider-info" id="slider-info">
+                    <span>强模糊 (小值)</span>
+                    <span>清晰 (大值)</span>
+                </div>
+            </div>
+            <button class="reset-btn" id="reset-btn">🔄 重置为原始图片</button>
+        </section>
+
+        <section class="images-section" id="images-section">
+            <div class="image-card">
+                <h3><span class="image-icon icon-original">📷</span> 原始图片</h3>
+                <div class="canvas-container">
+                    <canvas id="original-canvas"></canvas>
+                </div>
+            </div>
+            <div class="image-card">
+                <h3><span class="image-icon icon-spectrum">📊</span> 频谱图</h3>
+                <div class="canvas-container">
+                    <canvas id="spectrum-canvas"></canvas>
+                </div>
+            </div>
+            <div class="image-card">
+                <h3><span class="image-icon icon-filtered">✨</span> 滤波后图片</h3>
+                <div class="canvas-container">
+                    <canvas id="filtered-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">正在加载 WebAssembly 模块...</div>
+    </div>
+
+    <script type="module">
+        import init, { ImageProcessor } from './pkg/fft_image_processor.js';
+
+        let processor = null;
+        let originalImageData = null;
+        let imageWidth = 0;
+        let imageHeight = 0;
+
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loading-text');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const statusMessage = document.getElementById('status-message');
+        const controlsSection = document.getElementById('controls-section');
+        const imagesSection = document.getElementById('images-section');
+        const cutoffSlider = document.getElementById('cutoff-slider');
+        const cutoffValue = document.getElementById('cutoff-value');
+        const resetBtn = document.getElementById('reset-btn');
+        const originalCanvas = document.getElementById('original-canvas');
+        const spectrumCanvas = document.getElementById('spectrum-canvas');
+        const filteredCanvas = document.getElementById('filtered-canvas');
+        const filterModeRadios = document.querySelectorAll('input[name="filter-mode"]');
+        const sliderInfo = document.getElementById('slider-info');
+        const sliderTitle = document.getElementById('slider-title');
+
+        async function initializeWasm() {
+            loading.classList.add('active');
+            try {
+                await init();
+                processor = new ImageProcessor();
+                loading.classList.remove('active');
+            } catch (error) {
+                showStatus('WebAssembly 加载失败: ' + error.message, true);
+                loading.classList.remove('active');
+            }
+        }
+
+        function showStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.classList.add('active');
+            if (isError) {
+                statusMessage.classList.add('error');
+            } else {
+                statusMessage.classList.remove('error');
+            }
+            setTimeout(() => {
+                statusMessage.classList.remove('active');
+            }, 3000);
+        }
+
+        function loadImage(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('请上传图片文件', true);
+                return;
+            }
+
+            loading.classList.add('active');
+            loadingText.textContent = '正在处理图片...';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxSize = 512;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxSize || height > maxSize) {
+                        if (width > height) {
+                            height = (height * maxSize) / width;
+                            width = maxSize;
+                        } else {
+                            width = (width * maxSize) / height;
+                            height = maxSize;
+                        }
+                    }
+
+                    width = Math.floor(width);
+                    height = Math.floor(height);
+
+                    imageWidth = width;
+                    imageHeight = height;
+
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(img, 0, 0, width, height);
+
+                    const imageData = tempCtx.getImageData(0, 0, width, height);
+                    const grayData = new Uint8Array(width * height);
+
+                    for (let i = 0; i < width * height; i++) {
+                        const r = imageData.data[i * 4];
+                        const g = imageData.data[i * 4 + 1];
+                        const b = imageData.data[i * 4 + 2];
+                        grayData[i] = Math.floor(0.299 * r + 0.587 * g + 0.114 * b);
+                    }
+
+                    originalImageData = imageData;
+
+                    try {
+                        processor.load_image(grayData, width, height);
+                        drawOriginalImage(imageData);
+                        drawSpectrum();
+                        applyFilter(parseFloat(cutoffSlider.value));
+
+                        controlsSection.classList.add('active');
+                        imagesSection.classList.add('active');
+                        showStatus('图片加载成功！调整滑块查看滤波效果');
+                    } catch (error) {
+                        showStatus('图片处理失败: ' + error, true);
+                    }
+
+                    loading.classList.remove('active');
+                };
+                img.onerror = () => {
+                    showStatus('图片加载失败', true);
+                    loading.classList.remove('active');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function drawOriginalImage(imageData) {
+            originalCanvas.width = imageWidth;
+            originalCanvas.height = imageHeight;
+            const ctx = originalCanvas.getContext('2d');
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function drawSpectrum() {
+            const spectrumData = processor.get_magnitude_spectrum();
+            const fftSize = Math.sqrt(spectrumData.length);
+
+            spectrumCanvas.width = fftSize;
+            spectrumCanvas.height = fftSize;
+            const ctx = spectrumCanvas.getContext('2d');
+            const imageData = ctx.createImageData(fftSize, fftSize);
+
+            for (let i = 0; i < fftSize * fftSize; i++) {
+                const val = spectrumData[i];
+                imageData.data[i * 4] = val;
+                imageData.data[i * 4 + 1] = val;
+                imageData.data[i * 4 + 2] = val;
+                imageData.data[i * 4 + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function getCurrentFilterMode() {
+            const checked = document.querySelector('input[name="filter-mode"]:checked');
+            return checked ? checked.value : 'lowpass';
+        }
+
+        function updateSliderInfo(mode) {
+            if (mode === 'highpass') {
+                sliderTitle.textContent = '🎚️ 截止频率';
+                sliderInfo.innerHTML = '<span>强边缘 (大值)</span><span>弱边缘 (小值)</span>';
+            } else {
+                sliderTitle.textContent = '🎚️ 截止频率';
+                sliderInfo.innerHTML = '<span>强模糊 (小值)</span><span>清晰 (大值)</span>';
+            }
+        }
+
+        function applyFilter(cutoff) {
+            if (!processor) return;
+
+            const mode = getCurrentFilterMode();
+            const isHighpass = mode === 'highpass';
+            const filteredData = processor.apply_filter(cutoff, isHighpass);
+
+            filteredCanvas.width = imageWidth;
+            filteredCanvas.height = imageHeight;
+            const ctx = filteredCanvas.getContext('2d');
+            const imageData = ctx.createImageData(imageWidth, imageHeight);
+
+            for (let i = 0; i < imageWidth * imageHeight; i++) {
+                const val = filteredData[i];
+                imageData.data[i * 4] = val;
+                imageData.data[i * 4 + 1] = val;
+                imageData.data[i * 4 + 2] = val;
+                imageData.data[i * 4 + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                loadImage(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                loadImage(e.target.files[0]);
+            }
+        });
+
+        cutoffSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            cutoffValue.textContent = value.toFixed(2);
+            applyFilter(value);
+        });
+
+        filterModeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                updateSliderInfo(mode);
+                applyFilter(parseFloat(cutoffSlider.value));
+            });
+        });
+
+        resetBtn.addEventListener('click', () => {
+            cutoffSlider.value = 1.0;
+            cutoffValue.textContent = '1.00';
+            applyFilter(1.0);
+        });
+
+        initializeWasm();
+    </script>
+</body>
+</html>
