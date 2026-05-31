@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package terrain;
+
+// 地形块请求
+message ChunkRequest {
+  int32 chunk_x = 1;
+  int32 chunk_y = 2;
+  int32 chunk_z = 3;
+  int32 chunk_size = 4;
+  int32 lod_level = 5;
+}
+
+// 相机位置请求（用于流式传输）
+message CameraRequest {
+  float camera_x = 1;
+  float camera_y = 2;
+  float camera_z = 3;
+  int32 view_distance = 4;
+  int32 chunk_size = 5;
+}
+
+// 噪声种子数据
+message NoiseSeed {
+  int32 seed = 1;
+  float frequency = 2;
+  float amplitude = 3;
+  int32 octaves = 4;
+  float persistence = 5;
+  float lacunarity = 6;
+}
+
+// 地形块数据
+message ChunkData {
+  int32 chunk_x = 1;
+  int32 chunk_y = 2;
+  int32 chunk_z = 3;
+  int32 size = 4;
+  int32 lod_level = 5;
+  NoiseSeed noise_seed = 6;
+  repeated float density_field = 7;
+  float iso_surface = 8;
+  bool has_modifications = 9;
+}
+
+// 单个体素修改
+message VoxelModification {
+  int32 local_x = 1;
+  int32 local_y = 2;
+  int32 local_z = 3;
+  float density_delta = 4;
+  float new_density = 5;
+}
+
+// 编辑地形块请求
+message EditChunkRequest {
+  int32 chunk_x = 1;
+  int32 chunk_y = 2;
+  int32 chunk_z = 3;
+  int32 chunk_size = 4;
+  repeated VoxelModification modifications = 5;
+  int64 timestamp = 6;
+}
+
+// 编辑响应
+message EditResponse {
+  bool success = 1;
+  string message = 2;
+  int32 modified_count = 3;
+}
+
+// 批量编辑请求
+message BatchEditRequest {
+  repeated EditChunkRequest edits = 1;
+}
+
+// 获取修改记录请求
+message GetModificationsRequest {
+  int32 chunk_x = 1;
+  int32 chunk_y = 2;
+  int32 chunk_z = 3;
+}
+
+// 修改记录响应
+message ModificationsResponse {
+  bool has_modifications = 1;
+  repeated VoxelModification modifications = 2;
+  int64 last_modified = 3;
+}
+
+// 地形服务
+service TerrainService {
+  // 获取单个地形块
+  rpc GetChunk(ChunkRequest) returns (ChunkData);
+  
+  // 流式获取地形块（基于相机位置）
+  rpc StreamChunks(CameraRequest) returns (stream ChunkData);
+  
+  // 编辑单个地形块
+  rpc EditChunk(EditChunkRequest) returns (EditResponse);
+  
+  // 批量编辑
+  rpc BatchEdit(BatchEditRequest) returns (EditResponse);
+  
+  // 获取地形块的修改记录
+  rpc GetChunkModifications(GetModificationsRequest) returns (ModificationsResponse);
+}

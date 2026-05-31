@@ -1,0 +1,21 @@
+{
+  "name": "voxel-terrain-frontend",
+  "version": "1.0.0",
+  "description": "Three.js 体素地形前端，使用 Marching Cubes 和 LOD",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0",
+    "@grpc/grpc-js": "^1.9.0",
+    "@improbable-eng/grpc-web": "^0.15.0",
+    "google-protobuf": "^3.21.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@types/three": "^0.160.0"
+  }
+}

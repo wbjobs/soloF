@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无限体素地形 - Infinite Voxel Terrain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 280px;
+        }
+        
+        #ui-overlay h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        #controls-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #controls-info h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #4fc3f7;
+        }
+        
+        #controls-info p {
+            margin: 3px 0;
+            color: #ccc;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(79, 195, 247, 0.3);
+            border-top-color: #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-overlay">
+        <h1>⛰️ 体素地形</h1>
+        <div class="stat-row">
+            <span class="stat-label">FPS:</span>
+            <span class="stat-value" id="fps">60</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">位置:</span>
+            <span class="stat-value" id="position">0, 0, 0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">地形块:</span>
+            <span class="stat-value" id="chunk-count">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">三角形:</span>
+            <span class="stat-value" id="triangle-count">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">LOD 级别:</span>
+            <span class="stat-value" id="lod-level">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">编辑模式:</span>
+            <span class="stat-value" id="edit-mode">关闭</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">编辑半径:</span>
+            <span class="stat-value" id="edit-radius">2.0</span>
+        </div>
+    </div>
+    
+    <div id="controls-info">
+        <h3>🎮 控制</h3>
+        <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> 移动</p>
+        <p><span class="key">鼠标</span> 视角</p>
+        <p><span class="key">Space</span> 上升 <span class="key">Shift</span> 下降</p>
+        <p><span class="key">ESC</span> 解锁鼠标</p>
+        <p><span class="key">F</span> 切换编辑模式</p>
+        <p><span class="key">E</span> 切换 挖掘/添加 模式</p>
+        <p><span class="key">[</span><span class="key">]</span> 调整编辑半径</p>
+        <p><span class="key">1</span> 挖掘模式 <span class="key">2</span> 添加模式</p>
+        <p><span class="key">鼠标左键</span> 按住编辑</p>
+    </div>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>正在加载地形...</p>
+    </div>
+    
+    <div class="crosshair"></div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
