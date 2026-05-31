@@ -1,0 +1,31 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Wasm
+fft-wasm/pkg/
+fft-wasm/node_modules/
+
+# Go
+go-server/bin/
+go-server/vendor/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/package-lock.json
+frontend/.env
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
