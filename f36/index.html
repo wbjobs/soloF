@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNP 热图可视化工具</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🧬</span>
+                    <h1 class="title">SNP 热图可视化工具</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="clusterBtn" class="btn btn-primary">
+                        <span>🧬</span> 聚类分析
+                    </button>
+                    <button id="resetOrderBtn" class="btn btn-secondary">
+                        <span>↩️</span> 重置顺序
+                    </button>
+                    <button id="regenerateBtn" class="btn btn-secondary">
+                        <span>🔄</span> 重新生成
+                    </button>
+                    <button id="exportBtn" class="btn btn-secondary">
+                        <span>📥</span> 导出
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <aside class="sidebar">
+                <div class="panel">
+                    <h3 class="panel-title">📊 数据统计</h3>
+                    <div id="statsPanel" class="stats-content">
+                        <div class="stat-item">
+                            <span class="stat-label">样本数量</span>
+                            <span class="stat-value" id="sampleCount">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">基因位点</span>
+                            <span class="stat-value" id="positionCount">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">总变异数</span>
+                            <span class="stat-value" id="totalMutations">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3 class="panel-title">🎨 颜色方案</h3>
+                    <div class="color-schemes">
+                        <button class="color-scheme-btn active" data-scheme="classic">经典</button>
+                        <button class="color-scheme-btn" data-scheme="viridis">Viridis</button>
+                        <button class="color-scheme-btn" data-scheme="plasma">Plasma</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3 class="panel-title">🔍 突变类型分布</h3>
+                    <div id="mutationLegend" class="legend-content">
+                    </div>
+                </div>
+            </aside>
+
+            <section class="heatmap-section">
+                <div class="heatmap-container">
+                    <div class="heatmap-header">
+                        <h2>基因变异热图</h2>
+                        <div class="zoom-controls">
+                            <button id="zoomIn" class="btn btn-icon">➕</button>
+                            <button id="zoomReset" class="btn btn-icon">↺</button>
+                            <button id="zoomOut" class="btn btn-icon">➖</button>
+                        </div>
+                    </div>
+                    <div id="heatmapWrapper" class="heatmap-wrapper">
+                        <canvas id="heatmapCanvas"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script src="cluster.js"></script>
+    <script src="dataGenerator.js"></script>
+    <script src="dataProcessor.js"></script>
+    <script src="heatmapRenderer.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
