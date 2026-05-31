@@ -1,0 +1,16 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+backend/.env
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+*.log
