@@ -1,0 +1,14 @@
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.6
+websockets==12.0
+pyyaml==6.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.1
+y-py==0.6.0
+aiosqlite==0.19.0
+reportlab==4.0.9
+diff-match-patch==20230430
+beautifulsoup4==4.12.3
+lxml==5.1.0
