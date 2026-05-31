@@ -1,0 +1,30 @@
+{
+  "name": "todo-pwa-crdt",
+  "version": "1.0.0",
+  "description": "Offline-first todo PWA with CRDT sync",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/index.js"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "yjs": "^13.6.10",
+    "y-indexeddb": "^9.0.11",
+    "y-websocket": "^1.5.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^0.17.0",
+    "ws": "^8.14.2",
+    "y-leveldb": "^0.1.2"
+  }
+}
