@@ -1,0 +1,37 @@
+[package]
+name = "sctp-gateway"
+version = "0.1.0"
+edition = "2021"
+description = "SCTP gateway with stream-level mapping to TCP backends, multi-path transmission, and QoS control"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.21"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+axum = { version = "0.7", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bytes = "1"
+thiserror = "1"
+anyhow = "1"
+parking_lot = "0.12"
+dashmap = "6"
+tokio-util = { version = "0.7", features = ["codec", "io"] }
+pin-project-lite = "0.2"
+futures = "0.3"
+rand = "0.8"
+clap = { version = "4", features = ["derive"] }
+socket2 = { version = "0.5", features = ["all"] }
+nix = { version = "0.27", features = ["net", "socket"] }
+
+[dev-dependencies]
+tempfile = "3"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
