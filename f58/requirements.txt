@@ -1,0 +1,11 @@
+langchain==0.1.20
+langchain-community==0.0.38
+langchain-chroma==0.1.1
+pypdf==4.2.0
+chromadb==0.5.0
+sentence-transformers==2.7.0
+llama-cpp-python==0.2.75
+streamlit==1.34.0
+python-dotenv==1.0.1
+tqdm==4.66.4
+numpy==1.26.4
