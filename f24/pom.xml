@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.bookanalytics</groupId>
+    <artifactId>book-conversion-analytics</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>Book Conversion Analytics</name>
+    <description>Real-time book conversion rate analytics with Flink, Spring Boot and React</description>
+
+    <modules>
+        <module>flink-module</module>
+        <module>spring-boot-api</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <flink.version>1.17.1</flink.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <kafka.version>2.8.1</kafka.version>
+        <spring.boot.version>2.7.18</spring.boot.version>
+        <jedis.version>4.4.3</jedis.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>
