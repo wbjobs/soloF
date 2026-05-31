@@ -1,0 +1,29 @@
+[package]
+name = "note-sync-app"
+version = "0.1.0"
+description = "A Tauri App for note taking with P2P sync"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["api-all", "shell-open", "fs-read-file", "fs-write-file", "fs-create-dir", "fs-read-dir", "fs-remove-file", "fs-remove-dir"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+notify = "6.1"
+walkdir = "2.4"
+sha2 = "0.10"
+hex = "0.4"
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+thiserror = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+local-ip-address = "0.6"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
