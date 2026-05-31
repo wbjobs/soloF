@@ -1,0 +1,19 @@
+{
+  "name": "offline-md-notes",
+  "version": "1.0.0",
+  "description": "Offline-first Markdown notes with Yjs CRDT",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build:client": "cd client && npm run build",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
+  "keywords": ["markdown", "offline", "yjs", "crdt", "vue"],
+  "author": "",
+  "license": "MIT"
+}

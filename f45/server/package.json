@@ -1,0 +1,17 @@
+{
+  "name": "yjs-server",
+  "version": "1.0.0",
+  "description": "Yjs WebSocket sync server",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "y-leveldb": "^0.1.2",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.11"
+  }
+}
