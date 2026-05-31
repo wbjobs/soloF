@@ -1,0 +1,19 @@
+# Binaries
+bin/
+
+# Generated eBPF files
+probe/bpf_*.go
+probe/bpf_*.o
+
+# Unix socket
+/tmp/tcp-probe.sock
+*.sock
+
+# Go workspace
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
