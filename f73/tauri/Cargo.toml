@@ -1,0 +1,28 @@
+[package]
+name = "markdown-git-desktop"
+version = "0.1.0"
+description = "A Tauri App for managing Markdown files with Git"
+edition = "2021"
+
+[lib]
+name = "markdown_git_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-dialog = "2.0"
+git2 = { version = "0.19", features = ["vendored-libgit2", "ssh"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2.4"
+anyhow = "1.0"
+thiserror = "1.0"
+dirs = "5.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
