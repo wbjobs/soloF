@@ -1,0 +1,21 @@
+[package]
+name = "mqtt-bridge"
+version = "0.1.0"
+edition = "2021"
+description = "MQTT 客户端桥接服务 - 订阅 IoT 设备消息并转发到云端 API"
+
+[dependencies]
+rumqttc = "0.24"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+reqwest = { version = "0.12", features = ["json"] }
+notify = "6"
+anyhow = "1"
+thiserror = "1"
+log = "0.4"
+env_logger = "0.11"
+prometheus = { version = "0.13", features = ["process"] }
+hyper = { version = "1", features = ["full"] }
+
