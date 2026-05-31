@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络流量分析系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <h1>网络流量分析系统</h1>
+        <div class="header-actions">
+            <button id="refreshBtn" class="btn btn-primary">刷新数据</button>
+            <button id="generateBtn" class="btn btn-secondary">生成新数据</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="panel">
+                <h3>统计信息</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">总节点数</span>
+                        <span class="stat-value" id="totalNodes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">总边数</span>
+                        <span class="stat-value" id="totalEdges">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">社区数</span>
+                        <span class="stat-value" id="totalCommunities">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">异常节点</span>
+                        <span class="stat-value" id="anomalyNodes">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Top PageRank 节点</h3>
+                <div id="topPagerankList" class="pagerank-list">
+                    <p class="loading">加载中...</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>社区分布</h3>
+                <div id="communityList" class="community-list">
+                    <p class="loading">加载中...</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>图例</h3>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color anomaly"></div>
+                        <span>异常节点</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color normal"></div>
+                        <span>正常节点</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line anomaly-line"></div>
+                        <span>异常流量</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line normal-line"></div>
+                        <span>正常流量</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="graph-container">
+                <canvas id="graphCanvas"></canvas>
+                <div id="tooltip" class="tooltip"></div>
+            </div>
+
+            <div class="timeline-container">
+                <div class="timeline-controls">
+                    <button id="playBtn" class="timeline-btn" title="播放/暂停">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </button>
+                    <button id="prevBtn" class="timeline-btn" title="上一帧">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                        </svg>
+                    </button>
+                    <button id="nextBtn" class="timeline-btn" title="下一帧">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+                    <button id="resetBtn" class="timeline-btn" title="重置">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </button>
+                    <span id="timeLabel" class="time-label">--:--:--</span>
+                    <div class="timeline-speed">
+                        <label for="speedSelect">速度:</label>
+                        <select id="speedSelect">
+                            <option value="2000">0.5x</option>
+                            <option value="1000" selected>1x</option>
+                            <option value="500">2x</option>
+                            <option value="250">4x</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="timeline-slider-container">
+                    <input type="range" id="timelineSlider" min="0" max="10" value="0" step="1">
+                    <div id="timelineMarkers" class="timeline-markers"></div>
+                </div>
+                <div class="timeline-info">
+                    <span id="timeRangeLabel">时间范围: --</span>
+                    <span id="currentDataInfo">节点: 0 | 边: 0</span>
+                </div>
+            </div>
+
+            <div id="nodeInfo" class="node-info-panel hidden">
+                <h3>节点详情</h3>
+                <button class="close-btn" id="closeNodeInfo">×</button>
+                <div id="nodeInfoContent"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
