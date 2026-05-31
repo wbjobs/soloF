@@ -1,0 +1,201 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8xq7n6y5m4v2"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/city_visualizer.gd" id="2_visualizer"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="CityVisualizer" type="Node2D" parent="."]
+position = Vector2(140, 60)
+script = ExtResource("2_visualizer")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ControlPanel" type="PanelContainer" parent="UI"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 600.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ControlPanel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 290.0
+offset_bottom = 580.0
+
+[node name="Title" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "程序化城市生成器"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.95, 0.7, 0.3)
+theme_override_font_sizes/font_size = 18
+
+[node name="HSeparator1" type="HSeparator" parent="UI/ControlPanel/VBoxContainer"]
+
+[node name="SeedLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "种子:"
+
+[node name="SeedInput" type="LineEdit" parent="UI/ControlPanel/VBoxContainer"]
+text = "12345"
+placeholder_text = "输入种子值"
+
+[node name="RandomSeedButton" type="Button" parent="UI/ControlPanel/VBoxContainer"]
+text = "随机种子"
+
+[node name="HSeparator2" type="HSeparator" parent="UI/ControlPanel/VBoxContainer"]
+
+[node name="POICountLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "POI数量: 50"
+
+[node name="POICountSlider" type="HSlider" parent="UI/ControlPanel/VBoxContainer"]
+min_value = 20.0
+max_value = 150.0
+value = 50.0
+step = 1.0
+
+[node name="DistributionLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "分布方式:"
+
+[node name="DistributionOption" type="OptionButton" parent="UI/ControlPanel/VBoxContainer"]
+
+[node name="ClusterCountLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "簇数量: 4"
+
+[node name="ClusterCountSlider" type="HSlider" parent="UI/ControlPanel/VBoxContainer"]
+min_value = 1.0
+max_value = 8.0
+value = 4.0
+step = 1.0
+
+[node name="AspectRatioLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "街区最大宽高比: 4.0"
+
+[node name="AspectRatioSlider" type="HSlider" parent="UI/ControlPanel/VBoxContainer"]
+min_value = 1.5
+max_value = 10.0
+value = 4.0
+step = 0.5
+
+[node name="MinAreaLabel" type="Label" parent="UI/ControlPanel/VBoxContainer"]
+text = "街区最小面积: 800"
+
+[node name="MinAreaSlider" type="HSlider" parent="UI/ControlPanel/VBoxContainer"]
+min_value = 200.0
+max_value = 3000.0
+value = 800.0
+step = 100.0
+
+[node name="HSeparator3" type="HSeparator" parent="UI/ControlPanel/VBoxContainer"]
+
+[node name="ShowPOIsCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示POI点"
+button_pressed = true
+
+[node name="ShowStreetsCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示街道"
+button_pressed = true
+
+[node name="ShowBlocksCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示街区"
+button_pressed = true
+
+[node name="ShowTriangulationCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示三角剖分"
+
+[node name="ShowBlockTypesCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示街区类型"
+button_pressed = true
+
+[node name="ShowLabelsCheck" type="CheckBox" parent="UI/ControlPanel/VBoxContainer"]
+text = "显示街区标签"
+
+[node name="HSeparator4" type="HSeparator" parent="UI/ControlPanel/VBoxContainer"]
+
+[node name="GenerateButton" type="Button" parent="UI/ControlPanel/VBoxContainer"]
+text = "生成城市"
+theme_override_font_sizes/font_size = 16
+
+[node name="InfoPanel" type="PanelContainer" parent="UI"]
+offset_left = 10.0
+offset_top = 530.0
+offset_right = 310.0
+offset_bottom = 620.0
+
+[node name="InfoLabel" type="Label" parent="UI/InfoPanel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 290.0
+offset_bottom = 80.0
+text = "信息面板"
+autowrap_mode = 3
+
+[node name="LegendPanel" type="PanelContainer" parent="UI"]
+offset_left = 10.0
+offset_top = 630.0
+offset_right = 310.0
+offset_bottom = 710.0
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="UI/LegendPanel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 290.0
+offset_bottom = 70.0
+
+[node name="LegendTitle" type="Label" parent="UI/LegendPanel/VBoxContainer2"]
+text = "街区类型图例"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+
+[node name="ResidentialRow" type="HBoxContainer" parent="UI/LegendPanel/VBoxContainer2"]
+
+[node name="ResidentialColor" type="ColorRect" parent="UI/LegendPanel/VBoxContainer2/ResidentialRow"]
+offset_right = 20.0
+offset_bottom = 16.0
+color = Color(0.35, 0.5, 0.75)
+
+[node name="ResidentialLabel" type="Label" parent="UI/LegendPanel/VBoxContainer2/ResidentialRow"]
+text = "住宅区 (小面积)"
+
+[node name="CommercialRow" type="HBoxContainer" parent="UI/LegendPanel/VBoxContainer2"]
+
+[node name="CommercialColor" type="ColorRect" parent="UI/LegendPanel/VBoxContainer2/CommercialRow"]
+offset_right = 20.0
+offset_bottom = 16.0
+color = Color(0.9, 0.6, 0.2)
+
+[node name="CommercialLabel" type="Label" parent="UI/LegendPanel/VBoxContainer2/CommercialRow"]
+text = "商业区 (紧凑、中等)"
+
+[node name="ParkRow" type="HBoxContainer" parent="UI/LegendPanel/VBoxContainer2"]
+
+[node name="ParkColor" type="ColorRect" parent="UI/LegendPanel/VBoxContainer2/ParkRow"]
+offset_right = 20.0
+offset_bottom = 16.0
+color = Color(0.3, 0.7, 0.35)
+
+[node name="ParkLabel" type="Label" parent="UI/LegendPanel/VBoxContainer2/ParkRow"]
+text = "公园 (大面积)"
+
+[node name="IndustrialRow" type="HBoxContainer" parent="UI/LegendPanel/VBoxContainer2"]
+
+[node name="IndustrialColor" type="ColorRect" parent="UI/LegendPanel/VBoxContainer2/IndustrialRow"]
+offset_right = 20.0
+offset_bottom = 16.0
+color = Color(0.6, 0.4, 0.5)
+
+[node name="IndustrialLabel" type="Label" parent="UI/LegendPanel/VBoxContainer2/IndustrialRow"]
+text = "工业区 (大、细长)"
+
+[connection signal="pressed" from="UI/ControlPanel/VBoxContainer/GenerateButton" to="." method="_on_generate_button_pressed"]
+[connection signal="pressed" from="UI/ControlPanel/VBoxContainer/RandomSeedButton" to="." method="_on_random_seed_button_pressed"]
+[connection signal="value_changed" from="UI/ControlPanel/VBoxContainer/POICountSlider" to="." method="_on_poi_count_slider_value_changed"]
+[connection signal="value_changed" from="UI/ControlPanel/VBoxContainer/ClusterCountSlider" to="." method="_on_cluster_count_slider_value_changed"]
+[connection signal="value_changed" from="UI/ControlPanel/VBoxContainer/AspectRatioSlider" to="." method="_on_aspect_ratio_slider_value_changed"]
+[connection signal="value_changed" from="UI/ControlPanel/VBoxContainer/MinAreaSlider" to="." method="_on_min_area_slider_value_changed"]
+[connection signal="item_selected" from="UI/ControlPanel/VBoxContainer/DistributionOption" to="." method="_on_distribution_option_item_selected"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowPOIsCheck" to="." method="_on_show_pois_toggled"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowStreetsCheck" to="." method="_on_show_streets_toggled"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowBlocksCheck" to="." method="_on_show_blocks_toggled"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowTriangulationCheck" to="." method="_on_show_triangulation_toggled"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowBlockTypesCheck" to="." method="_on_show_block_types_toggled"]
+[connection signal="toggled" from="UI/ControlPanel/VBoxContainer/ShowLabelsCheck" to="." method="_on_show_labels_toggled"]
