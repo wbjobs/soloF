@@ -1,0 +1,32 @@
+{
+  "name": "ai-music-generator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@magenta/music": "^1.23.1",
+    "tone": "^14.7.77",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "axios": "^1.7.2",
+    "file-saver": "^2.0.5",
+    "jsmidgen": "^0.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/file-saver": "^2.0.7",
+    "typescript": "^5",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3"
+  }
+}
