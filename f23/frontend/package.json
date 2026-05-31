@@ -1,0 +1,16 @@
+{
+  "name": "molecule-visualizer-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for protein molecule 3D visualization with Three.js WebGPU",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.10"
+  }
+}

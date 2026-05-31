@@ -1,0 +1,15 @@
+HEADER    TEST MOLECULE                             
+TITLE     Test Protein with HETATM Records             
+
+ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00  0.00           N
+ATOM      2  CA  ALA A   1       1.500   0.000   0.000  1.00  0.00           C
+ATOM      3  C   ALA A   1       2.000   1.500   0.000  1.00  0.00           C
+ATOM      4  O   ALA A   1       1.500   2.500   0.500  1.00  0.00           O
+ATOM      5  CB  ALA A   1       2.000  -1.000   1.000  1.00  0.00           C
+
+HETATM    6 FE  HEM A   2      -1.000   2.000   1.000  1.00  0.00          FE
+HETATM    7  O  HOH A   3       3.000   3.000   3.000  1.00  0.00           O
+HETATM    8  P  LIG A   4      -2.000  -1.000   2.000  1.00  0.00           P
+HETATM    9  S  LIG A   4      -3.000   0.000   1.000  1.00  0.00           S
+
+END

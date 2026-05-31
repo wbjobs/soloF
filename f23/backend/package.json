@@ -1,0 +1,21 @@
+{
+  "name": "molecule-visualizer-backend",
+  "version": "1.0.0",
+  "description": "Backend for protein molecule 3D visualization",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "koa": "^2.15.0",
+    "koa-body": "^6.0.1",
+    "koa-router": "^12.0.1",
+    "minio": "^7.1.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
