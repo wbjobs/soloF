@@ -1,0 +1,13 @@
+{
+  "name": "babel-parser",
+  "version": "1.0.0",
+  "description": "Babel-based JS/TS AST parser for dependency extraction",
+  "main": "parse.js",
+  "scripts": {
+    "parse": "node parse.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0"
+  }
+}
