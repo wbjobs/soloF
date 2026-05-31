@@ -1,0 +1,33 @@
+{
+  "name": "matrix-transform-visualizer",
+  "version": "1.0.0",
+  "description": "3D Matrix Transformation Visualization Tool with WebAssembly + Rust + Three.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:wasm\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:wasm": "cd wasm && wasm-pack build --target web --out-dir ../public/wasm --watch",
+    "build": "npm run build:wasm && npm run build:client && npm run build:server",
+    "build:wasm": "cd wasm && wasm-pack build --target web --out-dir ../public/wasm",
+    "build:client": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "fastify": "^4.26.0",
+    "@fastify/cors": "^9.0.0",
+    "@fastify/static": "^7.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vue": "^3.4.0",
+    "vue-tsc": "^1.8.0",
+    "three": "^0.160.0",
+    "@types/three": "^0.160.0",
+    "tsx": "^4.7.0",
+    "concurrently": "^8.2.0",
+    "@types/node": "^20.10.0"
+  }
+}
