@@ -1,0 +1,11 @@
+# Build artifacts
+/on_cpu_bpf.o
+/on_cpu_bpf.go
+/ebpf-profiler
+
+# Generated downloads
+/downloads/
+
+# IDE
+.idea/
+.vscode/

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eBPF CPU Profiler</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f5f5f7; color: #1d1d1f; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #6e6e73; font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem;
+          border-bottom: 2px solid #e5e5ea; }
+  .tab { padding: 0.6rem 1.25rem; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+         color: #6e6e73; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: #0071e3; border-bottom-color: #0071e3; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .card { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  label { display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.85rem; }
+  input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #d2d2d7;
+                  border-radius: 8px; font-size: 0.95rem; margin-bottom: 1rem; }
+  input:focus, select:focus { outline: none; border-color: #0071e3; }
+  button { background: #0071e3; color: #fff; border: none; padding: 0.7rem 1.5rem;
+           border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #0077ed; }
+  button:disabled { background: #a1a1a6; cursor: not-allowed; }
+  button.stop { background: #ff3b30; }
+  button.stop:hover { background: #ff453a; }
+  .row { display: flex; gap: 1rem; }
+  .row > div { flex: 1; }
+  .output { background: #1d1d1f; color: #f5f5f7; padding: 1rem; border-radius: 8px;
+            font-family: 'SF Mono', Menlo, monospace; font-size: 0.8rem; max-height: 400px;
+            overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .status { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+  .status.error { background: #fff2f2; color: #b42318; border: 1px solid #fecdca; display: block; }
+  .status.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; display: block; }
+  .status.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; display: block; }
+  .stats { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+  .stat { flex: 1; text-align: center; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; color: #0071e3; }
+  .stat-label { font-size: 0.75rem; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #e5e5ea; }
+  th { font-weight: 600; color: #6e6e73; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+  tr:hover td { background: #f5f5f7; }
+  .pill { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px;
+          font-size: 0.75rem; font-weight: 600; }
+  .pill.green { background: #d1fae5; color: #065f46; }
+  .pill.red { background: #fee2e2; color: #991b1b; }
+  .pill.gray { background: #e5e7eb; color: #374151; }
+</style>
+</head>
+<body>
+  <h1>eBPF CPU Profiler</h1>
+  <p class="subtitle">On-demand and streaming CPU profiling with flamegraph export.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="on-demand">On-Demand</div>
+    <div class="tab" data-tab="streaming">Streaming (WS)</div>
+    <div class="tab" data-tab="history">History</div>
+    <div class="tab" data-tab="processes">Processes</div>
+  </div>
+
+  <!-- On-Demand Tab -->
+  <div class="tab-panel active" id="on-demand">
+    <div class="card">
+      <div class="row">
+        <div><label for="pid">Target PID</label><input type="number" id="pid" placeholder="12345" min="1"></div>
+        <div><label for="duration">Duration (seconds)</label><input type="number" id="duration" placeholder="10" min="1" value="10" max="{{.maxDurationSeconds}}"></div>
+      </div>
+      <div class="row">
+        <div><label for="sampleHz">Sample Frequency (Hz)</label><input type="number" id="sampleHz" placeholder="99" min="1" value="99"></div>
+        <div><label for="persist"><input type="checkbox" id="persist"> Persist to history</label></div>
+      </div>
+      <button onclick="startProfile()">Start Profiling</button>
+    </div>
+    <div id="od-status" class="status"></div>
+    <div id="od-results" style="display:none;">
+      <div class="stats">
+        <div class="stat"><div class="stat-value" id="od-total">0</div><div class="stat-label">Samples</div></div>
+        <div class="stat"><div class="stat-value" id="od-dropped" style="color:#b42318;">0</div><div class="stat-label">Dropped</div></div>
+      </div>
+      <div class="card"><label>Folded Output</label><div class="output" id="od-folded"></div></div>
+    </div>
+  </div>
+
+  <!-- Streaming Tab -->
+  <div class="tab-panel" id="streaming">
+    <div class="card">
+      <div class="row">
+        <div><label for="ws-target-type">Target Type</label>
+          <select id="ws-target-type">
+            <option value="pid">PID</option>
+            <option value="name">Process Name (auto-track fork/exec)</option>
+          </select>
+        </div>
+        <div><label id="ws-target-label" for="ws-target">Target</label><input id="ws-target" placeholder="e.g. 12345 or nginx"></div>
+      </div>
+      <div class="row">
+        <div><label for="ws-tick">Tick (seconds)</label><input type="number" id="ws-tick" value="3" min="1"></div>
+        <div><label for="ws-hz">Hz</label><input type="number" id="ws-hz" value="99" min="1"></div>
+      </div>
+      <div class="row">
+        <div><label><input type="checkbox" id="ws-persist"> Persist ticks</label></div>
+      </div>
+      <button id="ws-connect" onclick="wsConnect()">Connect WebSocket</button>
+      <button id="ws-start" onclick="wsStart()" disabled>Start Session</button>
+      <button id="ws-stop" class="stop" onclick="wsStop()" disabled>Stop Session</button>
+      <button id="ws-disconnect" class="stop" onclick="wsDisconnect()" disabled>Disconnect</button>
+    </div>
+    <div id="ws-status" class="status"></div>
+    <div id="ws-results" style="display:none;">
+      <div class="stats">
+        <div class="stat"><div class="stat-value" id="ws-batch">0</div><div class="stat-label">Batches</div></div>
+        <div class="stat"><div class="stat-value" id="ws-total">0</div><div class="stat-label">Samples (last)</div></div>
+        <div class="stat"><div class="stat-value" id="ws-sid" style="font-size:0.7rem;">-</div><div class="stat-label">Session</div></div>
+      </div>
+      <div class="card"><label>Latest Tick</label><div class="output" id="ws-folded"></div></div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div class="tab-panel" id="history">
+    <div class="card">
+      <div class="row">
+        <div><label for="h-name">Target Name</label><input id="h-name" placeholder="e.g. nginx"></div>
+        <div><label for="h-pid">Target PID</label><input id="h-pid" type="number" placeholder="optional"></div>
+      </div>
+      <div class="row">
+        <div><label for="h-since">Since (ISO)</label><input id="h-since" placeholder="2024-01-01T00:00:00Z"></div>
+        <div><label for="h-until">Until (ISO)</label><input id="h-until" placeholder="2024-12-31T23:59:59Z"></div>
+      </div>
+      <button onclick="loadHistory()">Search</button>
+    </div>
+    <div id="h-status" class="status"></div>
+    <div class="card" id="h-table" style="display:none;">
+      <table>
+        <thead><tr><th>ID</th><th>Target</th><th>PID</th><th>Duration</th><th>Hz</th><th>Samples</th><th>Started</th><th>Action</th></tr></thead>
+        <tbody id="h-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card" id="h-detail" style="display:none;">
+      <label>Record Detail</label>
+      <div class="output" id="h-folded"></div>
+    </div>
+  </div>
+
+  <!-- Processes Tab -->
+  <div class="tab-panel" id="processes">
+    <div class="card">
+      <div class="row">
+        <div><label for="p-name">Find by name</label><input id="p-name" placeholder="e.g. nginx"></div>
+        <div style="display:flex;align-items:flex-end;"><button onclick="findProc()" style="width:100%;">Find</button></div>
+      </div>
+      <button onclick="listAll()" style="margin-top:0.5rem;">List All</button>
+    </div>
+    <div id="p-status" class="status"></div>
+    <div class="card" id="p-table" style="display:none;">
+      <table>
+        <thead><tr><th>PID</th><th>PPID</th><th>Name</th><th>Cmd</th></tr></thead>
+        <tbody id="p-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+  });
+});
+
+// --- On-Demand ---
+function showStatus(el, msg, type) {
+  el.className = 'status ' + (type || 'info');
+  el.textContent = msg;
+}
+function hideStatus(el) { el.className = 'status'; el.textContent = ''; }
+
+async function startProfile() {
+  const pid = parseInt(document.getElementById('pid').value);
+  const dur = parseInt(document.getElementById('duration').value);
+  const hz = parseInt(document.getElementById('sampleHz').value) || 99;
+  const persist = document.getElementById('persist').checked;
+  if (!pid || !dur) { showStatus(document.getElementById('od-status'), 'PID and duration required', 'error'); return; }
+  const start = Date.now();
+  showStatus(document.getElementById('od-status'), 'Profiling...', 'info');
+  try {
+    const r = await fetch('/profile', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pid, duration_sec: dur, sample_hz: hz, persist})
+    });
+    const d = await r.json();
+    if (!r.ok) { showStatus(document.getElementById('od-status'), d.error || 'error', 'error'); return; }
+    showStatus(document.getElementById('od-status'), `Done in ${(Date.now()-start)/1000}s`, 'success');
+    document.getElementById('od-total').textContent = d.total_samples.toLocaleString();
+    document.getElementById('od-dropped').textContent = (d.dropped_samples||0).toLocaleString();
+    document.getElementById('od-folded').textContent = d.folded || '';
+    document.getElementById('od-results').style.display = 'block';
+  } catch (e) { showStatus(document.getElementById('od-status'), String(e), 'error'); }
+}
+
+// --- WebSocket Streaming ---
+let ws = null, wsSession = null;
+
+function wsConnect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/profile`);
+  ws.onopen = () => {
+    showStatus(document.getElementById('ws-status'), 'WebSocket connected', 'success');
+    document.getElementById('ws-connect').disabled = true;
+    document.getElementById('ws-disconnect').disabled = false;
+    document.getElementById('ws-start').disabled = false;
+  };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === 'tick') {
+      document.getElementById('ws-batch').textContent = m.payload.batch;
+      document.getElementById('ws-total').textContent = m.payload.total_samples.toLocaleString();
+      document.getElementById('ws-sid').textContent = m.payload.session_id;
+      document.getElementById('ws-folded').textContent = m.payload.folded || '';
+      document.getElementById('ws-results').style.display = 'block';
+    } else if (m.type === 'started') {
+      wsSession = m.payload.session_id;
+      document.getElementById('ws-stop').disabled = false;
+      showStatus(document.getElementById('ws-status'), 'Session ' + wsSession + ' started', 'success');
+    } else if (m.type === 'stopped') {
+      document.getElementById('ws-stop').disabled = true;
+      wsSession = null;
+      showStatus(document.getElementById('ws-status'), 'Session stopped', 'info');
+    } else if (m.type === 'error') {
+      showStatus(document.getElementById('ws-status'), m.error || 'error', 'error');
+    }
+  };
+  ws.onerror = () => showStatus(document.getElementById('ws-status'), 'WebSocket error', 'error');
+  ws.onclose = () => {
+    showStatus(document.getElementById('ws-status'), 'Disconnected', 'info');
+    document.getElementById('ws-connect').disabled = false;
+    document.getElementById('ws-disconnect').disabled = true;
+    document.getElementById('ws-start').disabled = true;
+    document.getElementById('ws-stop').disabled = true;
+  };
+}
+
+function wsStart() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  const kind = document.getElementById('ws-target-type').value;
+  const target = document.getElementById('ws-target').value.trim();
+  const tick = parseInt(document.getElementById('ws-tick').value) || 3;
+  const hz = parseInt(document.getElementById('ws-hz').value) || 99;
+  const persist = document.getElementById('ws-persist').checked;
+  const msg = {action: 'start', tick_sec: tick, sample_hz: hz, persist};
+  if (kind === 'pid') { msg.target_pid = parseInt(target); }
+  else { msg.target_name = target; }
+  ws.send(JSON.stringify(msg));
+}
+
+function wsStop() {
+  if (!ws || !wsSession) return;
+  ws.send(JSON.stringify({action: 'stop', session_id: wsSession}));
+}
+
+function wsDisconnect() { if (ws) ws.close(); }
+
+// --- History ---
+async function loadHistory() {
+  const params = new URLSearchParams();
+  ['name','pid','since','until'].forEach(k => {
+    const v = document.getElementById('h-'+k).value;
+    if (v) params.append('target_'+k === 'target_name' ? 'target_name' : k, v);
+  });
+  // manual fixes
+  if (document.getElementById('h-name').value) params.set('target_name', document.getElementById('h-name').value);
+  if (document.getElementById('h-pid').value) params.set('target_pid', document.getElementById('h-pid').value);
+  if (document.getElementById('h-since').value) params.set('since', document.getElementById('h-since').value);
+  if (document.getElementById('h-until').value) params.set('until', document.getElementById('h-until').value);
+
+  try {
+    const r = await fetch('/profile/history?' + params.toString());
+    const d = await r.json();
+    if (!r.ok) { showStatus(document.getElementById('h-status'), d.error || 'error', 'error'); return; }
+    const tb = document.getElementById('h-tbody');
+    tb.innerHTML = '';
+    d.records.forEach(rec => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${rec.id}</td><td>${rec.target_name||'-'}</td><td>${rec.target_pid}</td>
+        <td>${rec.duration_sec}s</td><td>${rec.sample_hz}</td><td>${rec.total_samples.toLocaleString()}</td>
+        <td>${new Date(rec.started_at).toLocaleString()}</td>
+        <td><button onclick="viewHistory('${rec.id}')">View</button>
+            <button onclick="deleteHistory('${rec.id}')" class="stop">Del</button></td>`;
+      tb.appendChild(tr);
+    });
+    document.getElementById('h-table').style.display = d.records.length ? 'block' : 'none';
+    showStatus(document.getElementById('h-status'), d.records.length + ' records', 'success');
+  } catch (e) { showStatus(document.getElementById('h-status'), String(e), 'error'); }
+}
+
+async function viewHistory(id) {
+  const r = await fetch('/profile/history/' + id);
+  const d = await r.json();
+  if (!r.ok) { showStatus(document.getElementById('h-status'), d.error || 'error', 'error'); return; }
+  document.getElementById('h-folded').textContent = d.folded;
+  document.getElementById('h-detail').style.display = 'block';
+}
+
+async function deleteHistory(id) {
+  const r = await fetch('/profile/history/' + id, {method: 'DELETE'});
+  const d = await r.json();
+  if (!r.ok) { showStatus(document.getElementById('h-status'), d.error || 'error', 'error'); return; }
+  loadHistory();
+}
+
+// --- Processes ---
+async function findProc() {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) return;
+  const r = await fetch('/processes/find?name=' + encodeURIComponent(name));
+  const d = await r.json();
+  if (!r.ok) { showStatus(document.getElementById('p-status'), d.error || 'error', 'error'); return; }
+  showStatus(document.getElementById('p-status'), d.pids.length + ' PIDs', 'success');
+  const tb = document.getElementById('p-tbody');
+  tb.innerHTML = '';
+  d.pids.forEach(pid => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${pid}</td><td>-</td><td>${name}</td><td><button onclick="viewProc(${pid})">Details</button></td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('p-table').style.display = 'block';
+}
+
+async function viewProc(pid) {
+  // Load full info via processes list filtered by pid (for simplicity, not implemented server-side; just show pid)
+  showStatus(document.getElementById('p-status'), 'PID ' + pid + ' (click On-Demand tab to profile)', 'info');
+}
+
+async function listAll() {
+  const r = await fetch('/processes');
+  const d = await r.json();
+  if (!r.ok) { showStatus(document.getElementById('p-status'), d.error || 'error', 'error'); return; }
+  const tb = document.getElementById('p-tbody');
+  tb.innerHTML = '';
+  d.processes.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.pid}</td><td>${p.ppid||'-'}</td><td>${p.name}</td><td>${p.cmd||''}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('p-table').style.display = 'block';
+  showStatus(document.getElementById('p-status'), d.processes.length + ' processes', 'success');
+}
+</script>
+</body>
+</html>
