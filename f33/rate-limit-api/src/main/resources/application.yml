@@ -1,0 +1,73 @@
+server:
+  port: 8080
+  tomcat:
+    max-threads: 200
+    max-connections: 10000
+    accept-count: 1000
+
+spring:
+  application:
+    name: rate-limit-service
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 500ms
+      connect-timeout: 500ms
+      lettuce:
+        pool:
+          max-active: 100
+          max-wait: 100ms
+          max-idle: 50
+          min-idle: 20
+          time-between-eviction-runs: 60000ms
+        shutdown-timeout: 100ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 100
+        minimum-number-of-calls: 20
+        permitted-number-of-calls-in-half-open-state: 10
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+        event-consumer-buffer-size: 10
+    instances:
+      redisRateLimit:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 1s
+        cancel-running-future: true
+    instances:
+      redisRateLimit:
+        base-config: default
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 50
+        max-wait-duration: 50ms
+    instances:
+      redisRateLimit:
+        base-config: default
+
+logging:
+  level:
+    com.ticket.ratelimit: INFO
+    org.springframework.data.redis: WARN
+    io.github.resilience4j: DEBUG
