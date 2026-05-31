@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DICOM 3D Viewer - 医学影像三维重建</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>📋 病例管理</h1>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="upload-section">
+                    <div id="dropZone" class="drop-zone">
+                        <div class="drop-icon">📁</div>
+                        <p>拖拽DICOM文件夹到此处</p>
+                        <p class="drop-hint">或点击选择文件夹</p>
+                    </div>
+                    <button id="selectFolderBtn" class="btn btn-primary">选择文件夹</button>
+                </div>
+                
+                <div class="cases-list">
+                    <h3>📂 历史病例</h3>
+                    <div id="casesContainer"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <h2 id="patientInfo">未加载病例</h2>
+                </div>
+                <div class="toolbar-right">
+                    <div class="window-control">
+                        <label>窗宽:</label>
+                        <input type="number" id="windowWidth" value="400">
+                    </div>
+                    <div class="window-control">
+                        <label>窗位:</label>
+                        <input type="number" id="windowCenter" value="40">
+                    </div>
+                    <button id="applyWindowBtn" class="btn btn-secondary">应用窗宽窗位</button>
+                    <button id="contourModeBtn" class="btn btn-outline">✏️ 勾画模式</button>
+                    <button id="calculateVolumeBtn" class="btn btn-success">📊 计算体积</button>
+                    <button id="exportJsonBtn" class="btn btn-secondary">💾 导出JSON</button>
+                    <button id="exportCsvBtn" class="btn btn-secondary">📄 导出CSV</button>
+                </div>
+            </div>
+            
+            <div class="viewports-container">
+                <div class="viewport-row">
+                    <div class="viewport-wrapper">
+                        <div class="viewport-header">轴状位 (Axial)</div>
+                        <div id="axialViewport" class="viewport"></div>
+                        <div class="viewport-controls">
+                            <input type="range" id="axialSlider" min="0" max="100" value="50">
+                            <span id="axialSliceNum">50</span>
+                        </div>
+                    </div>
+                    
+                    <div class="viewport-wrapper">
+                        <div class="viewport-header">冠状位 (Coronal)</div>
+                        <div id="coronalViewport" class="viewport"></div>
+                        <div class="viewport-controls">
+                            <input type="range" id="coronalSlider" min="0" max="100" value="50">
+                            <span id="coronalSliceNum">50</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="viewport-row">
+                    <div class="viewport-wrapper">
+                        <div class="viewport-header">矢状位 (Sagittal)</div>
+                        <div id="sagittalViewport" class="viewport"></div>
+                        <div class="viewport-controls">
+                            <input type="range" id="sagittalSlider" min="0" max="100" value="50">
+                            <span id="sagittalSliceNum">50</span>
+                        </div>
+                    </div>
+                    
+                    <div class="viewport-wrapper">
+                        <div class="viewport-header">三维重建 (Volume Rendering)</div>
+                        <div id="volumeViewport" class="viewport"></div>
+                        <div class="viewport-controls">
+                            <button id="resetVolumeBtn" class="btn btn-small">重置视角</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="contour-panel" id="contourPanel" style="display: none;">
+                <div class="ai-section">
+                    <h3>🤖 AI辅助勾画</h3>
+                    <div class="ai-status-bar" id="aiStatusBar">
+                        <span class="ai-status-indicator" id="aiStatusIndicator">⏳</span>
+                        <span id="aiStatusText">模型未加载</span>
+                        <button id="loadModelBtn" class="btn btn-small btn-secondary">加载模型</button>
+                    </div>
+                    <div class="ai-controls">
+                        <button id="aiSegmentBtn" class="btn btn-primary" disabled>
+                            🎯 AI自动分割当前切片
+                        </button>
+                        <div class="ai-progress" id="aiProgress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <span id="progressText">正在处理...</span>
+                        </div>
+                    </div>
+                    <div class="ai-results" id="aiResults" style="display: none;">
+                        <div class="result-stats">
+                            <p>检测到轮廓点数: <span id="aiPointCount">0</span></p>
+                            <p>预估面积: <span id="aiArea">0</span> mm²</p>
+                        </div>
+                        <div class="ai-actions">
+                            <button id="acceptAiBtn" class="btn btn-success">✅ 接受结果</button>
+                            <button id="refineAiBtn" class="btn btn-secondary">✏️ 微调轮廓</button>
+                            <button id="rejectAiBtn" class="btn btn-danger">❌ 重新分割</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <h3>✏️ 手动轮廓勾画</h3>
+                <div class="contour-tools">
+                    <button id="startContourBtn" class="btn btn-primary">开始勾画</button>
+                    <button id="undoPointBtn" class="btn btn-secondary">撤销上一点</button>
+                    <button id="clearContourBtn" class="btn btn-danger">清除当前</button>
+                    <button id="finishContourBtn" class="btn btn-success">完成勾画</button>
+                </div>
+                <div class="contour-info">
+                    <p>当前视图: <span id="currentView">-</span></p>
+                    <p>已勾画点数: <span id="pointCount">0</span></p>
+                    <p>轮廓名称: <input type="text" id="contourName" placeholder="输入轮廓名称"></p>
+                </div>
+                <div class="contours-list">
+                    <h4>已保存轮廓:</h4>
+                    <div id="savedContours"></div>
+                </div>
+            </div>
+            
+            <div class="volume-panel" id="volumePanel" style="display: none;">
+                <h3>📊 体积测量结果</h3>
+                <div id="volumeResults"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

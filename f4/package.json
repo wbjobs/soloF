@@ -1,0 +1,49 @@
+{
+  "name": "dicom-3d-viewer",
+  "version": "1.0.0",
+  "description": "DICOM 3D Viewer with contouring and volume measurement",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron --js-flags=\"--expose-gc --max-old-space-size=4096\" .",
+    "dev": "electron --js-flags=\"--expose-gc --max-old-space-size=4096\" . --dev",
+    "build": "electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "keywords": [
+    "dicom",
+    "medical",
+    "3d",
+    "cornerstone",
+    "vtk"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "@cornerstonejs/core": "^1.72.0",
+    "@cornerstonejs/streaming-image-volume-loader": "^1.72.0",
+    "@cornerstonejs/tools": "^1.72.0",
+    "better-sqlite3": "^9.2.2",
+    "dicom-parser": "^1.8.21",
+    "gl-matrix": "^3.4.3",
+    "ndarray": "^1.0.19",
+    "onnxruntime-web": "^1.26.0",
+    "sharp": "^0.33.1",
+    "vtk.js": "^29.2.0"
+  },
+  "build": {
+    "appId": "com.dicom.viewer",
+    "productName": "DICOM 3D Viewer",
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
