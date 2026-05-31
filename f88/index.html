@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光线传播可视化系统 - WebGPU</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <canvas id="webgpu-canvas"></canvas>
+        <div id="info-panel">
+            <h3>光线传播可视化系统</h3>
+            <div class="control-group">
+                <label>光源位置</label>
+                <div class="input-row">
+                    <span>X:</span>
+                    <input type="range" id="lightX" min="-10" max="10" step="0.1" value="0">
+                    <span id="lightXVal">0</span>
+                </div>
+                <div class="input-row">
+                    <span>Y:</span>
+                    <input type="range" id="lightY" min="-5" max="10" step="0.1" value="5">
+                    <span id="lightYVal">5</span>
+                </div>
+                <div class="input-row">
+                    <span>Z:</span>
+                    <input type="range" id="lightZ" min="-10" max="10" step="0.1" value="-5">
+                    <span id="lightZVal">-5</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>介质折射率</label>
+                <div class="input-row">
+                    <span>空气:</span>
+                    <input type="number" id="n1" min="1" max="2" step="0.01" value="1.0">
+                </div>
+                <div class="input-row">
+                    <span>介质:</span>
+                    <select id="mediumSelect">
+                        <option value="1.33">水 (1.33)</option>
+                        <option value="1.5" selected>玻璃 (1.50)</option>
+                        <option value="1.0">自定义</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <span>n2:</span>
+                    <input type="number" id="n2" min="1" max="3" step="0.01" value="1.5">
+                </div>
+            </div>
+            <div class="control-group">
+                <label>反射面形状</label>
+                <select id="surfaceShape">
+                    <option value="plane" selected>平面</option>
+                    <option value="sphere">球面</option>
+                </select>
+            </div>
+            <div class="control-group" id="sphereControls" style="display:none;">
+                <label>球面参数</label>
+                <div class="input-row">
+                    <span>半径:</span>
+                    <input type="range" id="sphereRadius" min="1" max="8" step="0.1" value="4">
+                    <span id="sphereRadiusVal">4</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>光线参数</label>
+                <div class="input-row">
+                    <span>最大反射次数:</span>
+                    <input type="number" id="maxBounces" min="1" max="10" value="10">
+                </div>
+                <div class="input-row">
+                    <span>光线数量:</span>
+                    <input type="range" id="rayCount" min="1" max="3" step="1" value="3">
+                    <span id="rayCountVal">3</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>色散效果</label>
+                <div class="input-row">
+                    <span>启用:</span>
+                    <input type="checkbox" id="dispersionToggle" checked>
+                </div>
+                <div id="dispersionControls">
+                    <div class="input-row">
+                        <span style="color: #ff4444;">红(n):</span>
+                        <input type="number" id="n2Red" min="1" max="3" step="0.001" value="1.51">
+                    </div>
+                    <div class="input-row">
+                        <span style="color: #44ff44;">绿(n):</span>
+                        <input type="number" id="n2Green" min="1" max="3" step="0.001" value="1.52">
+                    </div>
+                    <div class="input-row">
+                        <span style="color: #4488ff;">蓝(n):</span>
+                        <input type="number" id="n2Blue" min="1" max="3" step="0.001" value="1.53">
+                    </div>
+                    <div class="input-row">
+                        <button id="presetCrown">冕牌玻璃</button>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <button id="resetBtn">重置视图</button>
+                <button id="toggleRays">切换光线显示</button>
+            </div>
+            <div id="intersectionInfo" class="intersection-panel">
+                <h4>交点信息</h4>
+                <div id="intersectionContent">点击场景查看交点</div>
+            </div>
+        </div>
+    </div>
+    <div id="loading">正在初始化 WebGPU...</div>
+    <div id="fps-counter">FPS: 60</div>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
