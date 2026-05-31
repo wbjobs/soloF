@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebRTC CRDT 协同编辑器</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "yjs": "https://esm.sh/yjs@13.6.20",
+      "y-protocols/awareness.js": "https://esm.sh/y-protocols@1.0.6/awareness.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📝 P2P 协同编辑器</div>
+    <div class="room-info" id="roomInfo" hidden>
+      <span class="label">房间:</span>
+      <span id="roomIdText" class="room-id"></span>
+      <button class="btn small" id="copyRoomBtn">复制</button>
+      <span class="label" style="margin-left:12px">昵称:</span>
+      <span id="myNameText"></span>
+      <span class="label" style="margin-left:12px">模式:</span>
+      <span id="modeText" class="mode">P2P</span>
+      <button class="btn small danger" id="leaveBtn">离开</button>
+    </div>
+  </header>
+
+  <section class="lobby" id="lobby">
+    <div class="card">
+      <h2>进入房间</h2>
+      <label>
+        <span>你的昵称</span>
+        <input id="nameInput" type="text" maxlength="32" placeholder="例如：Alice" />
+      </label>
+      <div class="row">
+        <button class="btn primary" id="createBtn">创建新房间</button>
+      </div>
+      <hr />
+      <label>
+        <span>加入已有房间</span>
+        <input id="joinIdInput" type="text" maxlength="32" placeholder="粘贴房间 ID" />
+      </label>
+      <button class="btn" id="joinBtn">加入</button>
+      <p class="hint">
+        所有通信走 WebRTC DataChannel P2P；Discovery 服务仅用于交换 SDP/ICE，不中转业务数据。
+        若 ICE 连接失败，会自动降级为 Discovery 服务中继。
+      </p>
+      <div class="recent-rooms" id="recentRooms"></div>
+    </div>
+  </section>
+
+  <main class="editor-shell" id="editorShell" hidden>
+    <aside class="sidebar">
+      <h3>在线用户</h3>
+      <ul id="peerList" class="peer-list"></ul>
+      <h3>编辑历史</h3>
+      <div class="action-row">
+        <button class="btn small" id="downloadHistoryBtn">下载 JSON</button>
+      </div>
+      <div id="historyList" class="history"></div>
+      <h3>日志</h3>
+      <div id="log" class="log"></div>
+    </aside>
+    <div class="editor-wrap">
+      <div id="editorContainer" class="editor-container"></div>
+    </div>
+  </main>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
