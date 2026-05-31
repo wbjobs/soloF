@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UDP 可靠文件传输 - 发送端</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .content { padding: 30px; }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: translateY(-2px);
+        }
+        .upload-area .icon {
+            font-size: 64px;
+            color: #667eea;
+            margin-bottom: 16px;
+        }
+        .upload-area h3 { font-size: 20px; margin-bottom: 8px; color: #333; }
+        .upload-area p { color: #666; font-size: 14px; }
+        .upload-area input[type="file"] { display: none; }
+        .file-info {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+        .file-info.active { display: block; }
+        .file-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .file-info-row:last-child { margin-bottom: 0; }
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-size { color: #666; font-size: 14px; }
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .btn-secondary:hover { background: #7f8c8d; }
+        .progress-section {
+            display: none;
+            margin-top: 30px;
+        }
+        .progress-section.active { display: block; }
+        .progress-bar-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        .stat-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .stat-card.warning .value { color: #e74c3c; }
+        .stat-card.success .value { color: #27ae60; }
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+        .status-message {
+            text-align: center;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+        .status-message.success { background: #d4edda; color: #155724; }
+        .status-message.error { background: #f8d7da; color: #721c24; }
+        .status-message.info { background: #d1ecf1; color: #0c5460; }
+        .chart-container {
+            margin-top: 24px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+        .chart-container h4 {
+            margin-bottom: 16px;
+            color: #333;
+            font-size: 16px;
+        }
+        .mini-chart {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 8px 0;
+        }
+        .mini-chart .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+            transition: height 0.3s ease;
+        }
+        .congestion-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .congestion-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+        }
+        .congestion-item .label { font-size: 12px; color: #666; }
+        .congestion-item .value { font-size: 18px; font-weight: 600; color: #333; }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .path-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .path-card.active {
+            border-color: var(--path-color, #667eea);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+        .path-card.disabled {
+            opacity: 0.6;
+            filter: grayscale(50%);
+        }
+        .path-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--path-color, #667eea);
+        }
+        .path-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .path-card-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--path-color, #333);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .path-card-toggle {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #e9ecef;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .path-card-toggle.active {
+            background: var(--path-color, #27ae60);
+            color: white;
+        }
+        .path-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .path-stat {
+            text-align: center;
+            padding: 8px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 8px;
+        }
+        .path-stat .label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .path-stat .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+        }
+        .path-stat .value.warning { color: #e74c3c; }
+        .path-stat .value.success { color: #27ae60; }
+        .path-health-bar {
+            margin-top: 12px;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .path-health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--path-color, #27ae60), #2ecc71);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .path-chart {
+            margin-top: 12px;
+            height: 50px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 4px 0;
+        }
+        .path-chart .bar {
+            flex: 1;
+            background: var(--path-color, #667eea);
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+            opacity: 0.6;
+            transition: height 0.3s ease;
+        }
+        .path-chart .bar.loss {
+            background: #e74c3c;
+        }
+        .footer {
+            text-align: center;
+            padding: 16px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📤 UDP 可靠文件传输</h1>
+            <p>发送端 - 基于自定义 UDP 可靠协议</p>
+        </div>
+        <div class="content">
+            <div class="upload-area" id="uploadArea">
+                <div class="icon">📁</div>
+                <h3>选择文件或拖拽到此处</h3>
+                <p>支持任意大小文件，每分片 1KB，使用滑动窗口和 AIMD 拥塞控制</p>
+                <input type="file" id="fileInput">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <div class="file-info-row">
+                    <span class="file-name" id="fileName">-</span>
+                    <span class="file-size" id="fileSize">-</span>
+                </div>
+                <div class="file-info-row">
+                    <span>文件 ID:</span>
+                    <span id="fileId">-</span>
+                </div>
+                <div class="file-info-row">
+                    <span>总分片数:</span>
+                    <span id="totalChunks">-</span>
+                </div>
+                <div class="file-info-row">
+                    <button class="btn btn-primary" id="sendBtn" disabled>开始传输</button>
+                    <button class="btn btn-secondary" id="clearBtn">清除</button>
+                </div>
+            </div>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">传输进度</div>
+                        <div class="value" id="statProgress">0%</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="label">吞吐量</div>
+                        <div class="value" id="statThroughput">0 B/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">已发送分片</div>
+                        <div class="value" id="statSent">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">已确认分片</div>
+                        <div class="value" id="statAcked">0</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="label">重传分片</div>
+                        <div class="value" id="statRetrans">0</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="label">丢包率</div>
+                        <div class="value" id="statLoss">0%</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="label">虚假重传恢复</div>
+                        <div class="value" id="statSpurious">0</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h4>吞吐量趋势</h4>
+                    <div class="mini-chart" id="throughputChart"></div>
+                </div>
+
+                <div class="path-dashboard" id="pathDashboard" style="display: none; margin-top: 24px;">
+                    <div class="section-title">
+                        <span>🌐</span> 路径健康度仪表盘
+                    </div>
+                    <div class="path-controls" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">调度算法</label>
+                            <select id="algorithmSelect" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                <option value="dynamicWeighted">动态加权（推荐）</option>
+                                <option value="weightedRoundRobin">加权轮询</option>
+                                <option value="leastLoaded">最少负载</option>
+                                <option value="bestHealth">最佳健康度</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="path-cards" id="pathCards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;"></div>
+                </div>
+
+                <div class="congestion-info">
+                    <div class="congestion-item">
+                        <div class="label">拥塞窗口 (cwnd)</div>
+                        <div class="value" id="statCwnd">-</div>
+                    </div>
+                    <div class="congestion-item">
+                        <div class="label">慢启动阈值 (ssthresh)</div>
+                        <div class="value" id="statSsthresh">-</div>
+                    </div>
+                    <div class="congestion-item">
+                        <div class="label">RTT / RTO</div>
+                        <div class="value" id="statRtt">-</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-secondary" id="pauseBtn">暂停</button>
+                    <button class="btn btn-secondary" id="resumeBtn" disabled>继续</button>
+                    <button class="btn btn-danger" id="cancelBtn">取消</button>
+                </div>
+            </div>
+
+            <div class="status-message info" id="statusMessage" style="display: none;"></div>
+        </div>
+        <div class="footer">
+            UDP 可靠文件传输系统 | 分片 1KB | 滑动窗口 | 超时重传 | AIMD 拥塞控制
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileId = document.getElementById('fileId');
+        const totalChunks = document.getElementById('totalChunks');
+        const sendBtn = document.getElementById('sendBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const statusMessage = document.getElementById('statusMessage');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const throughputChart = document.getElementById('throughputChart');
+
+        let selectedFile = null;
+        let socket = null;
+        let throughputHistory = new Array(30).fill(0);
+        let multiPathEnabled = false;
+        let pathsConfig = [];
+        let pathsStats = {};
+        let pathHistory = {};
+
+        const apiBase = window.location.origin;
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatBytes(file.size);
+            fileId.textContent = Math.floor(Date.now() % 0xFFFFFFFF);
+            totalChunks.textContent = Math.ceil(file.size / 1024).toLocaleString();
+            fileInfo.classList.add('active');
+            sendBtn.disabled = false;
+            hideStatus();
+        }
+
+        clearBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('active');
+            progressSection.classList.remove('active');
+            sendBtn.disabled = true;
+            hideStatus();
+        });
+
+        sendBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            sendBtn.disabled = true;
+            clearBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                showStatus('正在连接接收端...', 'info');
+
+                const response = await fetch(`${apiBase}/api/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || '上传失败');
+                }
+
+                showStatus('传输已启动...', 'info');
+                progressSection.classList.add('active');
+                connectSocket();
+            } catch (err) {
+                showStatus('错误: ' + err.message, 'error');
+                sendBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        });
+
+        function connectSocket() {
+            if (socket) socket.disconnect();
+
+            socket = io(apiBase, { transports: ['websocket', 'polling'] });
+
+            socket.on('connect', () => {
+                console.log('WebSocket connected');
+            });
+
+            socket.on('transfer:start', (data) => {
+                showStatus(`开始传输: ${data.fileName}`, 'info');
+                if (data.multiPath) {
+                    initPathDashboard();
+                }
+            });
+
+            socket.on('transfer:stats', (stats) => {
+                updateStats(stats);
+                if (stats.pathStats && multiPathEnabled) {
+                    pathsStats = stats.pathStats;
+                    updatePathDashboard();
+                }
+            });
+
+            socket.on('path:stats', (data) => {
+                pathsStats[data.pathId] = data.pathStats;
+                updatePathCard(data.pathId, data.pathStats);
+            });
+
+            socket.on('path:scheduled', (info) => {
+            });
+
+            socket.on('transfer:complete', () => {
+                showStatus('传输完成！', 'success');
+                pauseBtn.disabled = true;
+                resumeBtn.disabled = true;
+                cancelBtn.disabled = true;
+                setTimeout(() => {
+                    sendBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }, 1000);
+            });
+
+            socket.on('transfer:finished', (result) => {
+                showStatus(`传输完成！用时 ${(result.elapsedMs / 1000).toFixed(2)} 秒，平均吞吐量 ${result.throughputStr}`, 'success');
+            });
+
+            socket.on('transfer:error', (data) => {
+                showStatus('传输错误: ' + data.error, 'error');
+                resetUI();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('WebSocket disconnected');
+            });
+        }
+
+        function updateStats(stats) {
+            progressBar.style.width = stats.progress + '%';
+            progressBar.textContent = stats.progress.toFixed(1) + '%';
+
+            document.getElementById('statProgress').textContent = stats.progress.toFixed(1) + '%';
+            document.getElementById('statThroughput').textContent = stats.throughputStr;
+            document.getElementById('statSent').textContent = stats.sentChunks.toLocaleString() + ' / ' + stats.totalChunks.toLocaleString();
+            document.getElementById('statAcked').textContent = stats.ackedChunks.toLocaleString();
+            document.getElementById('statRetrans').textContent = stats.retransmittedChunks.toLocaleString() + ' (' + stats.retransmissionRate.toFixed(1) + '%)';
+            document.getElementById('statLoss').textContent = stats.lossRate.toFixed(2) + '%';
+            document.getElementById('statCwnd').textContent = stats.cwnd;
+            document.getElementById('statSsthresh').textContent = stats.ssthresh;
+            document.getElementById('statRtt').textContent = stats.rtt + ' / ' + stats.rto + ' ms';
+            document.getElementById('statSpurious').textContent = stats.spuriousRecoveries || 0;
+
+            throughputHistory.shift();
+            throughputHistory.push(stats.throughput);
+            updateChart();
+        }
+
+        function updateChart() {
+            const max = Math.max(...throughputHistory, 1);
+            throughputChart.innerHTML = throughputHistory
+                .map(v => `<div class="bar" style="height: ${(v / max) * 100}%"></div>`)
+                .join('');
+        }
+
+        async function initPathDashboard() {
+            try {
+                const response = await fetch(`${apiBase}/api/paths`);
+                const data = await response.json();
+                pathsConfig = data.paths;
+                pathsStats = data.stats || {};
+                multiPathEnabled = true;
+
+                pathsConfig.forEach(path => {
+                    if (!pathHistory[path.id]) {
+                        pathHistory[path.id] = {
+                            rtt: new Array(20).fill(0),
+                            loss: new Array(20).fill(0),
+                        };
+                    }
+                });
+
+                document.getElementById('pathDashboard').style.display = 'block';
+                document.getElementById('algorithmSelect').value = data.algorithm || 'dynamicWeighted';
+                renderPathCards();
+                updatePathDashboard();
+            } catch (e) {
+                console.error('Failed to init path dashboard:', e);
+            }
+        }
+
+        function renderPathCards() {
+            const container = document.getElementById('pathCards');
+            container.innerHTML = pathsConfig.map(path => `
+                <div class="path-card ${path.enabled ? 'active' : 'disabled'}" id="path-card-${path.id}" style="--path-color: ${path.color};">
+                    <div class="path-card-header">
+                        <div class="path-card-name">
+                            <span>${path.id === 'wifi' ? '📶' : '🔌'}</span>
+                            ${path.name}
+                        </div>
+                        <button class="path-card-toggle ${path.enabled ? 'active' : ''}" id="path-toggle-${path.id}" onclick="togglePath('${path.id}')">
+                            ${path.enabled ? '已启用' : '已禁用'}
+                        </button>
+                    </div>
+                    <div class="path-stats-grid">
+                        <div class="path-stat">
+                            <div class="label">RTT</div>
+                            <div class="value" id="path-rtt-${path.id}">- ms</div>
+                        </div>
+                        <div class="path-stat">
+                            <div class="label">丢包率</div>
+                            <div class="value" id="path-loss-${path.id}">-</div>
+                        </div>
+                        <div class="path-stat">
+                            <div class="label">发送包数</div>
+                            <div class="value" id="path-sent-${path.id}">0</div>
+                        </div>
+                        <div class="path-stat">
+                            <div class="label">健康度</div>
+                            <div class="value success" id="path-health-${path.id}">-</div>
+                        </div>
+                    </div>
+                    <div class="path-health-bar">
+                        <div class="path-health-fill" id="path-health-bar-${path.id}" style="width: 0%"></div>
+                    </div>
+                    <div class="path-chart" id="path-chart-${path.id}">
+                        ${new Array(20).fill(0).map(() => '<div class="bar" style="height: 5%"></div>').join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePathDashboard() {
+            pathsConfig.forEach(path => {
+                updatePathCard(path.id, pathsStats[path.id]);
+            });
+        }
+
+        function updatePathCard(pathId, stats) {
+            if (!stats) return;
+
+            const rttElement = document.getElementById(`path-rtt-${pathId}`);
+            const lossElement = document.getElementById(`path-loss-${pathId}`);
+            const sentElement = document.getElementById(`path-sent-${pathId}`);
+            const healthElement = document.getElementById(`path-health-${pathId}`);
+            const healthBar = document.getElementById(`path-health-bar-${pathId}`);
+            const chartElement = document.getElementById(`path-chart-${pathId}`);
+
+            if (rttElement) rttElement.textContent = stats.rtt.toFixed(0) + ' ms';
+            if (lossElement) {
+                lossElement.textContent = stats.lossRate.toFixed(2) + '%';
+                lossElement.className = 'value' + (stats.lossRate > 2 ? ' warning' : '');
+            }
+            if (sentElement) sentElement.textContent = stats.sentPackets.toLocaleString();
+            if (healthElement) healthElement.textContent = (stats.healthScore * 100).toFixed(0) + '%';
+            if (healthBar) healthBar.style.width = (stats.healthScore * 100) + '%';
+
+            if (chartElement && pathHistory[pathId]) {
+                pathHistory[pathId].rtt.shift();
+                pathHistory[pathId].rtt.push(stats.rtt);
+                pathHistory[pathId].loss.shift();
+                pathHistory[pathId].loss.push(stats.lossRate);
+
+                const maxRtt = Math.max(...pathHistory[pathId].rtt, 1);
+                chartElement.innerHTML = pathHistory[pathId].rtt.map((v, i) => {
+                    const hasLoss = pathHistory[pathId].loss[i] > 0;
+                    return `<div class="bar ${hasLoss ? 'loss' : ''}" style="height: ${Math.max(5, (v / maxRtt) * 100)}%"></div>`;
+                }).join('');
+            }
+        }
+
+        async function togglePath(pathId) {
+            const path = pathsConfig.find(p => p.id === pathId);
+            if (!path) return;
+
+            path.enabled = !path.enabled;
+
+            try {
+                await fetch(`${apiBase}/api/paths/${pathId}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: path.enabled }),
+                });
+
+                const card = document.getElementById(`path-card-${pathId}`);
+                const toggle = document.getElementById(`path-toggle-${pathId}`);
+                card.className = 'path-card ' + (path.enabled ? 'active' : 'disabled');
+                toggle.className = 'path-card-toggle ' + (path.enabled ? 'active' : '');
+                toggle.textContent = path.enabled ? '已启用' : '已禁用';
+            } catch (e) {
+                console.error('Failed to toggle path:', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('algorithmSelect').addEventListener('change', async (e) => {
+                try {
+                    await fetch(`${apiBase}/api/scheduling-algorithm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ algorithm: e.target.value }),
+                    });
+                    showStatus(`调度算法已切换为: ${e.target.options[e.target.selectedIndex].text}`, 'info');
+                } catch (e) {
+                    console.error('Failed to change algorithm:', e);
+                }
+            });
+        });
+
+        pauseBtn.addEventListener('click', async () => {
+            await fetch(`${apiBase}/api/pause`, { method: 'POST' });
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = false;
+            showStatus('传输已暂停', 'info');
+        });
+
+        resumeBtn.addEventListener('click', async () => {
+            await fetch(`${apiBase}/api/resume`, { method: 'POST' });
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+            showStatus('传输已继续', 'info');
+        });
+
+        cancelBtn.addEventListener('click', async () => {
+            if (confirm('确定要取消传输吗？')) {
+                await fetch(`${apiBase}/api/cancel`, { method: 'POST' });
+                resetUI();
+                showStatus('传输已取消', 'info');
+            }
+        });
+
+        function resetUI() {
+            sendBtn.disabled = false;
+            clearBtn.disabled = false;
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+            cancelBtn.disabled = false;
+            progressSection.classList.remove('active');
+            if (socket) socket.disconnect();
+            socket = null;
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message ' + type;
+            statusMessage.style.display = 'block';
+        }
+
+        function hideStatus() {
+            statusMessage.style.display = 'none';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (socket) socket.disconnect();
+        });
+    </script>
+</body>
+</html>

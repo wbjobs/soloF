@@ -1,0 +1,20 @@
+{
+  "name": "udp-reliable-file-transfer",
+  "version": "1.0.0",
+  "description": "Reliable file transfer over UDP with custom protocol",
+  "main": "index.js",
+  "scripts": {
+    "receiver": "node receiver/server.js",
+    "sender": "node sender/server.js",
+    "test": "node test/speed-test.js"
+  },
+  "keywords": ["udp", "file-transfer", "reliable-protocol", "webrtc"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5"
+  }
+}
