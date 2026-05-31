@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 软体物理模拟器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.8;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #info h3 {
+            margin-bottom: 10px;
+            color: #00ff88;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🎮 3D 软体物理模拟器</h3>
+        <p>🖱️ 拖拽软体顶点使其变形</p>
+        <p>✂️ <b>Shift + 鼠标拖动</b>：切割软体</p>
+        <p>🔄 松开鼠标后会自然晃动</p>
+        <p>⌨️ 鼠标滚轮缩放视角</p>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let world;
+        let softBodyMesh, softBodyBodies = [], softBodyConstraints = [];
+        let boundaryBodies = [];
+        let raycaster, mouse;
+        let selectedBody = null;
+        let isDragging = false;
+        let dragForce = 80;
+        let softBodyMaterial, groundMaterial, contactMaterial;
+
+        let isCutting = false;
+        let cutLine = [];
+        let cutLineMesh;
+        let cutEdges = new Set();
+        let cutVertexPairs = [];
+        let splitVertices = new Map();
+        let cutEffectMeshes = [];
+
+        const config = {
+            gridSize: 8,
+            spacing: 0.5,
+            particleRadius: 0.22,
+            boundaryRadius: 0.3,
+            stiffness: 1.2,
+            damping: 0.45,
+            mass: 0.4,
+            friction: 0.8,
+            restitution: 0.1
+        };
+
+        function init() {
+            initThree();
+            initCannon();
+            createSoftBody();
+            createGround();
+            initInteraction();
+            animate();
+        }
+
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            scene.fog = new THREE.Fog(0x1a1a2e, 10, 30);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(8, 6, 8);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 3;
+            controls.maxDistance = 20;
+
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(10, 15, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            directionalLight.shadow.camera.left = -15;
+            directionalLight.shadow.camera.right = 15;
+            directionalLight.shadow.camera.top = 15;
+            directionalLight.shadow.camera.bottom = -15;
+            scene.add(directionalLight);
+
+            const pointLight1 = new THREE.PointLight(0x00ff88, 0.5, 20);
+            pointLight1.position.set(-5, 5, 5);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x00aaff, 0.5, 20);
+            pointLight2.position.set(5, 5, -5);
+            scene.add(pointLight2);
+
+            const cutLineGeometry = new THREE.BufferGeometry();
+            const cutLineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xff4444, 
+                linewidth: 3,
+                transparent: true,
+                opacity: 0.9
+            });
+            cutLineMesh = new THREE.Line(cutLineGeometry, cutLineMaterial);
+            scene.add(cutLineMesh);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function initCannon() {
+            world = new CANNON.World();
+            world.gravity.set(0, -9.82, 0);
+            world.broadphase = new CANNON.NaiveBroadphase();
+            world.solver.iterations = 60;
+            world.solver.tolerance = 0.001;
+            
+            softBodyMaterial = new CANNON.Material();
+            groundMaterial = new CANNON.Material();
+            
+            contactMaterial = new CANNON.ContactMaterial(
+                softBodyMaterial,
+                groundMaterial,
+                {
+                    friction: config.friction,
+                    restitution: config.restitution,
+                    contactEquationStiffness: 3e7,
+                    contactEquationRelaxation: 1,
+                    frictionEquationStiffness: 1e7,
+                    frictionEquationRelaxation: 2
+                }
+            );
+            world.addContactMaterial(contactMaterial);
+            
+            const selfContactMaterial = new CANNON.ContactMaterial(
+                softBodyMaterial,
+                softBodyMaterial,
+                {
+                    friction: 0.3,
+                    restitution: 0.05,
+                    contactEquationStiffness: 1e7,
+                    contactEquationRelaxation: 2
+                }
+            );
+            world.addContactMaterial(selfContactMaterial);
+            
+            world.defaultContactMaterial.contactEquationStiffness = 1e7;
+            world.defaultContactMaterial.contactEquationRelaxation = 2;
+        }
+
+        function createSoftBody() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            const colors = [];
+
+            const offsetX = -(config.gridSize - 1) * config.spacing / 2;
+            const offsetZ = -(config.gridSize - 1) * config.spacing / 2;
+            const startY = 4;
+
+            for (let i = 0; i < config.gridSize; i++) {
+                for (let j = 0; j < config.gridSize; j++) {
+                    const x = offsetX + i * config.spacing;
+                    const z = offsetZ + j * config.spacing;
+                    const y = startY;
+
+                    const isBoundary = i === 0 || i === config.gridSize - 1 || j === 0 || j === config.gridSize - 1;
+                    const radius = isBoundary ? config.boundaryRadius : config.particleRadius;
+
+                    const body = new CANNON.Body({
+                        mass: config.mass,
+                        position: new CANNON.Vec3(x, y, z),
+                        shape: new CANNON.Sphere(radius),
+                        material: softBodyMaterial,
+                        linearDamping: config.damping,
+                        angularDamping: config.damping,
+                        collisionFilterGroup: 1,
+                        collisionFilterMask: 1 | 2
+                    });
+                    body.allowSleep = false;
+                    world.addBody(body);
+                    softBodyBodies.push(body);
+
+                    if (isBoundary) {
+                        boundaryBodies.push(body);
+                    }
+
+                    vertices.push(x, y, z);
+                    
+                    const color = new THREE.Color();
+                    color.setHSL(0.4 + (i + j) / (config.gridSize * 2) * 0.2, 0.8, 0.5 + Math.random() * 0.1);
+                    colors.push(color.r, color.g, color.b);
+                }
+            }
+
+            for (let i = 0; i < config.gridSize - 1; i++) {
+                for (let j = 0; j < config.gridSize - 1; j++) {
+                    const a = i * config.gridSize + j;
+                    const b = a + 1;
+                    const c = a + config.gridSize;
+                    const d = c + 1;
+
+                    indices.push(a, c, b);
+                    indices.push(b, c, d);
+                }
+            }
+
+            for (let i = 0; i < config.gridSize; i++) {
+                for (let j = 0; j < config.gridSize; j++) {
+                    const idx = i * config.gridSize + j;
+                    
+                    if (i < config.gridSize - 1) {
+                        createConstraint(idx, idx + config.gridSize);
+                    }
+                    if (j < config.gridSize - 1) {
+                        createConstraint(idx, idx + 1);
+                    }
+                    if (i < config.gridSize - 1 && j < config.gridSize - 1) {
+                        createConstraint(idx, idx + config.gridSize + 1);
+                        createConstraint(idx + 1, idx + config.gridSize);
+                    }
+                    if (i < config.gridSize - 2) {
+                        createBendConstraint(idx, idx + 2 * config.gridSize);
+                    }
+                    if (j < config.gridSize - 2) {
+                        createBendConstraint(idx, idx + 2);
+                    }
+                }
+            }
+
+            createShearConstraints();
+            createVolumePreservationConstraints();
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshPhysicalMaterial({
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.85,
+                roughness: 0.3,
+                metalness: 0.1,
+                clearcoat: 0.8,
+                clearcoatRoughness: 0.2,
+                side: THREE.DoubleSide,
+                flatShading: false
+            });
+
+            softBodyMesh = new THREE.Mesh(geometry, material);
+            softBodyMesh.castShadow = true;
+            softBodyMesh.receiveShadow = true;
+            scene.add(softBodyMesh);
+
+            const wireframeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff88,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.2
+            });
+            const wireframe = new THREE.Mesh(geometry.clone(), wireframeMaterial);
+            softBodyMesh.add(wireframe);
+        }
+
+        function createConstraint(idx1, idx2) {
+            const bodyA = softBodyBodies[idx1];
+            const bodyB = softBodyBodies[idx2];
+            const distance = bodyA.position.distanceTo(bodyB.position);
+            
+            const constraint = new CANNON.DistanceConstraint(bodyA, bodyB, distance, config.stiffness * 1500);
+            world.addConstraint(constraint);
+            softBodyConstraints.push(constraint);
+        }
+
+        function createBendConstraint(idx1, idx2) {
+            const bodyA = softBodyBodies[idx1];
+            const bodyB = softBodyBodies[idx2];
+            const distance = bodyA.position.distanceTo(bodyB.position);
+            
+            const constraint = new CANNON.DistanceConstraint(bodyA, bodyB, distance, config.stiffness * 800);
+            world.addConstraint(constraint);
+            softBodyConstraints.push(constraint);
+        }
+
+        function createShearConstraints() {
+            for (let i = 0; i < config.gridSize - 2; i++) {
+                for (let j = 0; j < config.gridSize - 2; j++) {
+                    const idx = i * config.gridSize + j;
+                    createBendConstraint(idx, idx + 2 * config.gridSize + 2);
+                    createBendConstraint(idx + 2, idx + 2 * config.gridSize);
+                }
+            }
+        }
+
+        function createVolumePreservationConstraints() {
+            const centerIdx = Math.floor(config.gridSize / 2) * config.gridSize + Math.floor(config.gridSize / 2);
+            const centerBody = softBodyBodies[centerIdx];
+            
+            for (let i = 0; i < boundaryBodies.length; i++) {
+                const distance = centerBody.position.distanceTo(boundaryBodies[i].position);
+                const constraint = new CANNON.DistanceConstraint(centerBody, boundaryBodies[i], distance * 1.2, config.stiffness * 300);
+                world.addConstraint(constraint);
+                softBodyConstraints.push(constraint);
+            }
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(30, 30, 50, 50);
+            const groundMeshMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2d3436,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMeshMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            const gridHelper = new THREE.GridHelper(30, 30, 0x444444, 0x333333);
+            gridHelper.position.y = 0.01;
+            scene.add(gridHelper);
+
+            const groundShape = new CANNON.Plane();
+            const groundBody = new CANNON.Body({ 
+                mass: 0, 
+                shape: groundShape,
+                material: groundMaterial,
+                collisionFilterGroup: 2,
+                collisionFilterMask: 1 | 2
+            });
+            groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+            world.addBody(groundBody);
+
+            const wallShape = new CANNON.Box(new CANNON.Vec3(0.5, 5, 15));
+            
+            [-7, 7].forEach(x => {
+                const wallBody = new CANNON.Body({ 
+                    mass: 0, 
+                    shape: wallShape, 
+                    material: groundMaterial,
+                    collisionFilterGroup: 2,
+                    collisionFilterMask: 1
+                });
+                wallBody.position.set(x, 2.5, 0);
+                world.addBody(wallBody);
+            });
+
+            [-7, 7].forEach(z => {
+                const wallBody = new CANNON.Body({ 
+                    mass: 0, 
+                    shape: new CANNON.Box(new CANNON.Vec3(15, 5, 0.5)), 
+                    material: groundMaterial,
+                    collisionFilterGroup: 2,
+                    collisionFilterMask: 1
+                });
+                wallBody.position.set(0, 2.5, z);
+                world.addBody(wallBody);
+            });
+        }
+
+        function initInteraction() {
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            renderer.domElement.addEventListener('mouseleave', onMouseUp);
+        }
+
+        function onMouseDown(event) {
+            event.preventDefault();
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            if (event.shiftKey) {
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(softBodyMesh);
+                
+                if (intersects.length > 0) {
+                    isCutting = true;
+                    controls.enabled = false;
+                    cutLine = [];
+                    cutEdges.clear();
+                    cutVertexPairs = [];
+                    
+                    const point = intersects[0].point;
+                    cutLine.push(point.clone());
+                    updateCutLineMesh();
+                }
+            } else {
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(softBodyMesh);
+
+                if (intersects.length > 0) {
+                    isDragging = true;
+                    controls.enabled = false;
+                    
+                    const face = intersects[0].face;
+                    const vertexIndices = [face.a, face.b, face.c];
+                    let minDist = Infinity;
+                    
+                    for (const idx of vertexIndices) {
+                        const vertex = new THREE.Vector3();
+                        vertex.fromBufferAttribute(softBodyMesh.geometry.attributes.position, idx);
+                        const dist = intersects[0].point.distanceTo(vertex);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            selectedBody = softBodyBodies[idx];
+                        }
+                    }
+                }
+            }
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            if (isCutting) {
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(softBodyMesh);
+                
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    
+                    if (cutLine.length > 0) {
+                        const lastPoint = cutLine[cutLine.length - 1];
+                        if (point.distanceTo(lastPoint) > 0.05) {
+                            cutLine.push(point.clone());
+                            updateCutLineMesh();
+                            checkEdgeIntersection(lastPoint, point);
+                        }
+                    } else {
+                        cutLine.push(point.clone());
+                        updateCutLineMesh();
+                    }
+                }
+                return;
+            }
+
+            if (!isDragging || !selectedBody) return;
+
+            const planeNormal = new THREE.Vector3();
+            camera.getWorldDirection(planeNormal);
+            planeNormal.negate();
+            
+            const planePoint = new THREE.Vector3(
+                selectedBody.position.x,
+                selectedBody.position.y,
+                selectedBody.position.z
+            );
+            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePoint);
+
+            raycaster.setFromCamera(mouse, camera);
+            const targetPoint = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, targetPoint);
+
+            if (targetPoint) {
+                const maxDist = 1.5;
+                const dx = targetPoint.x - selectedBody.position.x;
+                const dy = targetPoint.y - selectedBody.position.y;
+                const dz = targetPoint.z - selectedBody.position.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                
+                let forceScale = dragForce;
+                if (dist > maxDist) {
+                    forceScale = dragForce * (maxDist / dist);
+                }
+                
+                const maxVelocity = 5;
+                const velocity = new CANNON.Vec3(
+                    dx * forceScale * 0.1,
+                    dy * forceScale * 0.1,
+                    dz * forceScale * 0.1
+                );
+                
+                const velMag = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z);
+                if (velMag > maxVelocity) {
+                    velocity.scale(maxVelocity / velMag, velocity);
+                }
+                
+                selectedBody.velocity.copy(velocity);
+            }
+        }
+
+        function onMouseUp() {
+            if (isCutting) {
+                isCutting = false;
+                controls.enabled = true;
+                
+                if (cutEdges.size > 0) {
+                    performCut();
+                }
+                
+                cutLine = [];
+                updateCutLineMesh();
+            }
+            
+            isDragging = false;
+            selectedBody = null;
+            controls.enabled = true;
+        }
+
+        function updateCutLineMesh() {
+            const positions = new Float32Array(cutLine.length * 3);
+            for (let i = 0; i < cutLine.length; i++) {
+                positions[i * 3] = cutLine[i].x;
+                positions[i * 3 + 1] = cutLine[i].y;
+                positions[i * 3 + 2] = cutLine[i].z;
+            }
+            cutLineMesh.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            cutLineMesh.geometry.setDrawRange(0, cutLine.length);
+            cutLineMesh.geometry.computeBoundingSphere();
+        }
+
+        function checkEdgeIntersection(p1, p2) {
+            const positions = softBodyMesh.geometry.attributes.position;
+            const indices = softBodyMesh.geometry.index;
+            
+            const lineStart = projectToScreen(p1);
+            const lineEnd = projectToScreen(p2);
+            
+            for (let i = 0; i < indices.count; i += 3) {
+                const a = indices.getX(i);
+                const b = indices.getX(i + 1);
+                const c = indices.getX(i + 2);
+                
+                checkSingleEdgeIntersection(a, b, positions, lineStart, lineEnd);
+                checkSingleEdgeIntersection(b, c, positions, lineStart, lineEnd);
+                checkSingleEdgeIntersection(c, a, positions, lineStart, lineEnd);
+            }
+        }
+
+        function projectToScreen(point) {
+            const vector = point.clone().project(camera);
+            return {
+                x: (vector.x + 1) / 2 * window.innerWidth,
+                y: (-vector.y + 1) / 2 * window.innerHeight
+            };
+        }
+
+        function checkSingleEdgeIntersection(idxA, idxB, positions, lineStart, lineEnd) {
+            const edgeKey = Math.min(idxA, idxB) + '_' + Math.max(idxA, idxB);
+            if (cutEdges.has(edgeKey)) return;
+            
+            const vA = new THREE.Vector3();
+            const vB = new THREE.Vector3();
+            vA.fromBufferAttribute(positions, idxA);
+            vB.fromBufferAttribute(positions, idxB);
+            
+            const screenA = projectToScreen(vA);
+            const screenB = projectToScreen(vB);
+            
+            if (lineSegmentsIntersect(
+                lineStart.x, lineStart.y, lineEnd.x, lineEnd.y,
+                screenA.x, screenA.y, screenB.x, screenB.y
+            )) {
+                cutEdges.add(edgeKey);
+                cutVertexPairs.push({ idxA, idxB });
+                
+                const midPoint = new THREE.Vector3().addVectors(vA, vB).multiplyScalar(0.5);
+                createCutEffect(midPoint);
+            }
+        }
+
+        function lineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+            const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (Math.abs(denom) < 0.0001) return false;
+            
+            const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+            
+            return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+        }
+
+        function performCut() {
+            const positions = softBodyMesh.geometry.attributes.position;
+            const vertexCount = positions.count;
+            
+            for (let i = softBodyConstraints.length - 1; i >= 0; i--) {
+                const constraint = softBodyConstraints[i];
+                const bodyA = constraint.bodyA;
+                const bodyB = constraint.bodyB;
+                
+                const idxA = softBodyBodies.indexOf(bodyA);
+                const idxB = softBodyBodies.indexOf(bodyB);
+                
+                for (const pair of cutVertexPairs) {
+                    if ((idxA === pair.idxA && idxB === pair.idxB) || 
+                        (idxA === pair.idxB && idxB === pair.idxA)) {
+                        world.removeConstraint(constraint);
+                        softBodyConstraints.splice(i, 1);
+                        
+                        const separationForce = 3;
+                        const dir = new CANNON.Vec3(
+                            (Math.random() - 0.5) * separationForce,
+                            Math.random() * separationForce * 0.5,
+                            (Math.random() - 0.5) * separationForce
+                        );
+                        bodyA.applyImpulse(dir, new CANNON.Vec3());
+                        bodyB.applyImpulse(new CANNON.Vec3(-dir.x, -dir.y, -dir.z), new CANNON.Vec3());
+                        break;
+                    }
+                }
+            }
+            
+            addCutParticles();
+        }
+
+        function createCutEffect(position) {
+            const particleCount = 8;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = [];
+            
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = position.x;
+                positions[i * 3 + 1] = position.y;
+                positions[i * 3 + 2] = position.z;
+                
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.2,
+                    y: Math.random() * 0.2,
+                    z: (Math.random() - 0.5) * 0.2,
+                    life: 1.0
+                });
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0xff6666,
+                size: 0.1,
+                transparent: true,
+                opacity: 1
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            particles.userData.velocities = velocities;
+            scene.add(particles);
+            cutEffectMeshes.push(particles);
+        }
+
+        function addCutParticles() {
+            for (const pair of cutVertexPairs) {
+                const bodyA = softBodyBodies[pair.idxA];
+                const bodyB = softBodyBodies[pair.idxB];
+                
+                const midPoint = new THREE.Vector3(
+                    (bodyA.position.x + bodyB.position.x) / 2,
+                    (bodyA.position.y + bodyB.position.y) / 2,
+                    (bodyA.position.z + bodyB.position.z) / 2
+                );
+                
+                createCutEffect(midPoint);
+            }
+        }
+
+        function updateCutEffects() {
+            for (let i = cutEffectMeshes.length - 1; i >= 0; i--) {
+                const mesh = cutEffectMeshes[i];
+                const positions = mesh.geometry.attributes.position.array;
+                const velocities = mesh.userData.velocities;
+                let allDead = true;
+                
+                for (let j = 0; j < velocities.length; j++) {
+                    if (velocities[j].life > 0) {
+                        positions[j * 3] += velocities[j].x;
+                        positions[j * 3 + 1] += velocities[j].y;
+                        positions[j * 3 + 2] += velocities[j].z;
+                        velocities[j].y -= 0.005;
+                        velocities[j].life -= 0.02;
+                        allDead = false;
+                    }
+                }
+                
+                mesh.geometry.attributes.position.needsUpdate = true;
+                mesh.material.opacity = Math.max(0, velocities[0].life);
+                
+                if (allDead) {
+                    scene.remove(mesh);
+                    mesh.geometry.dispose();
+                    mesh.material.dispose();
+                    cutEffectMeshes.splice(i, 1);
+                }
+            }
+        }
+
+        function updateSoftBodyMesh() {
+            const positions = softBodyMesh.geometry.attributes.position.array;
+            
+            for (let i = 0; i < softBodyBodies.length; i++) {
+                const body = softBodyBodies[i];
+                positions[i * 3] = body.position.x;
+                positions[i * 3 + 1] = body.position.y;
+                positions[i * 3 + 2] = body.position.z;
+            }
+            
+            softBodyMesh.geometry.attributes.position.needsUpdate = true;
+            softBodyMesh.geometry.computeVertexNormals();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const fixedTimeStep = 1 / 120;
+            const subSteps = 2;
+            for (let i = 0; i < subSteps; i++) {
+                world.step(fixedTimeStep);
+            }
+
+            updateSoftBodyMesh();
+            updateCutEffects();
+
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
