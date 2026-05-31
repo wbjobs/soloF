@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  webrtc-transcoder:
+    build: .
+    container_name: webrtc-transcoder
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "40000-40100:40000-40100/udp"
+    volumes:
+      - ./hls_output:/app/hls_output
+      - ./config:/app/config:ro
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

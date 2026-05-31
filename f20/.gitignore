@@ -1,0 +1,5 @@
+node_modules/
+hls_output/
+*.log
+.env
+.DS_Store

@@ -1,0 +1,99 @@
+{
+  "server": {
+    "port": 3000,
+    "apiPort": 3001,
+    "host": "0.0.0.0"
+  },
+  "mediasoup": {
+    "rtcMinPort": 40000,
+    "rtcMaxPort": 49999,
+    "webRtcServerOptions": {
+      "listenInfos": [
+        {
+          "protocol": "udp",
+          "ip": "0.0.0.0",
+          "announcedIp": null
+        },
+        {
+          "protocol": "tcp",
+          "ip": "0.0.0.0",
+          "announcedIp": null
+        }
+      ]
+    },
+    "routerOptions": {
+      "mediaCodecs": [
+        {
+          "kind": "video",
+          "mimeType": "video/H264",
+          "clockRate": 90000,
+          "parameters": {
+            "level-asymmetry-allowed": 1,
+            "packetization-mode": 1,
+            "profile-level-id": "42e01f"
+          }
+        },
+        {
+          "kind": "audio",
+          "mimeType": "audio/opus",
+          "clockRate": 48000,
+          "channels": 2
+        }
+      ]
+    }
+  },
+  "transcoding": {
+    "profiles": [
+      {
+        "name": "1080p",
+        "width": 1920,
+        "height": 1080,
+        "videoBitrate": "5000k",
+        "audioBitrate": "192k",
+        "fps": 30
+      },
+      {
+        "name": "720p",
+        "width": 1280,
+        "height": 720,
+        "videoBitrate": "2500k",
+        "audioBitrate": "128k",
+        "fps": 30
+      },
+      {
+        "name": "480p",
+        "width": 854,
+        "height": 480,
+        "videoBitrate": "1000k",
+        "audioBitrate": "96k",
+        "fps": 25
+      }
+    ],
+    "hls": {
+      "segmentDuration": 1,
+      "listSize": 3,
+      "outputDir": "./hls_output"
+    }
+  },
+  "watermark": {
+    "enabled": false,
+    "type": "text",
+    "text": "Live Stream",
+    "fontSize": 24,
+    "fontColor": "white",
+    "position": "bottom-right",
+    "imagePath": null
+  },
+  "pip": {
+    "enabled": false,
+    "maxInputs": 4,
+    "layout": "grid"
+  },
+  "streamRecovery": {
+    "enabled": true,
+    "disconnectTimeout": 10,
+    "recoveryWindow": 60,
+    "maxReconnectAttempts": 5,
+    "eventCallbacks": []
+  }
+}
