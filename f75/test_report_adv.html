@@ -1,0 +1,737 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态模型评估报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+        
+        .header .meta {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .summary {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+        
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+        
+        .score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .score-card .label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .score-card .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .robustness-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .robustness-section h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+        
+        .robustness-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .robustness-card {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            padding: 16px;
+            border-radius: 12px;
+        }
+        
+        .robustness-card .attack-name {
+            font-weight: 600;
+            color: #c53030;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .robustness-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        
+        .robustness-item .metric {
+            color: #718096;
+        }
+        
+        .robustness-item .drop {
+            color: #c53030;
+            font-weight: 600;
+        }
+        
+        .results {
+            display: grid;
+            gap: 24px;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-header {
+            background: #f7fafc;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .result-header .image-name {
+            font-weight: 600;
+            color: #1a202c;
+        }
+        
+        .result-header .tags {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .attack-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .attack-tag.clean {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .attack-tag.gaussian_noise {
+            background: #feebc8;
+            color: #744210;
+        }
+        
+        .attack-tag.occlusion {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .result-header .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .result-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            padding: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .result-body {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .image-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .image-section img {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #f7fafc;
+        }
+        
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .text-block {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .text-block .label {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .text-block .content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2d3748;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .scores-section {
+            padding: 0 24px 24px;
+        }
+        
+        .scores-section h3 {
+            font-size: 16px;
+            color: #1a202c;
+            margin-bottom: 12px;
+        }
+        
+        .scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        
+        .score-item {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .score-item .label {
+            font-size: 11px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        
+        .score-item .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .score-item .value.high {
+            color: #2f855a;
+        }
+        
+        .score-item .value.medium {
+            color: #d69e2e;
+        }
+        
+        .score-item .value.low {
+            color: #c53030;
+        }
+        
+        .robustness-metrics {
+            background: #fff5f5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        
+        .robustness-metrics h4 {
+            font-size: 13px;
+            color: #c53030;
+            margin-bottom: 8px;
+        }
+        
+        .robustness-metrics .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+        }
+        
+        .robustness-metrics .metric-item {
+            text-align: center;
+            padding: 6px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .robustness-metrics .metric-item .label {
+            font-size: 10px;
+            color: #718096;
+        }
+        
+        .robustness-metrics .metric-item .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c53030;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        
+        .latency {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 多模态模型评估报告</h1>
+            <div class="meta">
+                模型: gpt-4-vision-preview | 生成时间: 2026-05-17 19:06:00 | 测试样本: 2
+            </div>
+        </div>
+        
+        
+        <div class="summary">
+            <h2>📊 总体评分</h2>
+            <div class="score-grid">
+                
+                <div class="score-card">
+                    <div class="label">bleu1</div>
+                    <div class="value">0.6000</div>
+                </div>
+                
+                <div class="score-card">
+                    <div class="label">bleu2</div>
+                    <div class="value">0.4700</div>
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        
+        
+        
+        
+        
+        
+        <div class="robustness-section">
+            <h2>📉 鲁棒性分析</h2>
+            <div class="robustness-grid">
+                
+                <div class="robustness-card">
+                    <div class="attack-name">⚔️  gaussian_noise</div>
+                    
+                    <div class="robustness-item">
+                        <span class="metric">bleu1</span>
+                        <span class="drop">-40.0%</span>
+                    </div>
+                    
+                    <div class="robustness-item">
+                        <span class="metric">bleu2</span>
+                        <span class="drop">-48.4%</span>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="results">
+            
+            <div class="result-card">
+                <div class="result-header">
+                    <span class="image-name">📄 red_square.jpg</span>
+                    <div class="tags">
+                        
+                        <span class="attack-tag clean">clean</span>
+                        
+                        <span class="status success">
+                            ✅ 成功
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="result-body">
+                    <div class="image-section">
+                        <img src="file:///E:/soloF/f75/test_images/red_square.jpg" alt="red_square.jpg" 
+                             onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'padding:40px;text-align:center;color:#718096;background:#f7fafc;border-radius:8px;\'>图片加载失败</div>');">
+                    </div>
+                    
+                    <div class="text-section">
+                        <div class="text-block">
+                            <div class="label">预期描述</div>
+                            <div class="content">一张纯红色的正方形图片，中间有白色的 RED 文字</div>
+                        </div>
+                        
+                        <div class="text-block">
+                            <div class="label">模型回复</div>
+                            <div class="content">这是一张红色背景的图片，中间有白色的 RED 文字</div>
+                            
+                            <div class="latency">⏱️ 响应时间: 2.35s</div>
+                            
+                        </div>
+                        
+                        
+                        
+                        
+                    </div>
+                </div>
+                
+                
+                <div class="scores-section">
+                    <h3>🎯 详细评分</h3>
+                    <div class="scores-grid">
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU1</div>
+                            <div class="value high">
+                                0.7500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU2</div>
+                            <div class="value medium">
+                                0.6200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU3</div>
+                            <div class="value medium">
+                                0.4800
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU4</div>
+                            <div class="value low">
+                                0.3500
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-pre</div>
+                            <div class="value high">
+                                0.8800
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-rec</div>
+                            <div class="value high">
+                                0.8200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-fme</div>
+                            <div class="value high">
+                                0.8500
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-pre</div>
+                            <div class="value high">
+                                0.7200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-rec</div>
+                            <div class="value medium">
+                                0.6500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-fme</div>
+                            <div class="value medium">
+                                0.6800
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-pre</div>
+                            <div class="value high">
+                                0.8000
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-rec</div>
+                            <div class="value high">
+                                0.7500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-fme</div>
+                            <div class="value high">
+                                0.7700
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="result-card">
+                <div class="result-header">
+                    <span class="image-name">📄 red_square.jpg</span>
+                    <div class="tags">
+                        
+                        <span class="attack-tag gaussian_noise">gaussian_noise</span>
+                        
+                        <span class="status success">
+                            ✅ 成功
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="result-body">
+                    <div class="image-section">
+                        <img src="file:///E:/soloF/f75/test_images/red_square.jpg" alt="red_square.jpg" 
+                             onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div style=\'padding:40px;text-align:center;color:#718096;background:#f7fafc;border-radius:8px;\'>图片加载失败</div>');">
+                    </div>
+                    
+                    <div class="text-section">
+                        <div class="text-block">
+                            <div class="label">预期描述</div>
+                            <div class="content">一张纯红色的正方形图片，中间有白色的 RED 文字</div>
+                        </div>
+                        
+                        <div class="text-block">
+                            <div class="label">模型回复</div>
+                            <div class="content">图片中有红色区域和一些模糊的文字</div>
+                            
+                            <div class="latency">⏱️ 响应时间: 2.15s</div>
+                            
+                        </div>
+                        
+                        
+                        
+                        
+                        <div class="robustness-metrics">
+                            <h4>📉 得分下降 (vs 原图)</h4>
+                            <div class="metrics-grid">
+                                
+                                <div class="metric-item">
+                                    <div class="label">bleu_bleu1</div>
+                                    <div class="value">-40.0%</div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                
+                <div class="scores-section">
+                    <h3>🎯 详细评分</h3>
+                    <div class="scores-grid">
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU1</div>
+                            <div class="value medium">
+                                0.4500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU2</div>
+                            <div class="value low">
+                                0.3200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU3</div>
+                            <div class="value low">
+                                0.2500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">BLEU4</div>
+                            <div class="value low">
+                                0.1500
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-pre</div>
+                            <div class="value medium">
+                                0.5500
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-rec</div>
+                            <div class="value medium">
+                                0.4800
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE1-fme</div>
+                            <div class="value medium">
+                                0.5100
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-pre</div>
+                            <div class="value low">
+                                0.3800
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-rec</div>
+                            <div class="value low">
+                                0.3200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGE2-fme</div>
+                            <div class="value low">
+                                0.3500
+                            </div>
+                        </div>
+                        
+                        
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-pre</div>
+                            <div class="value medium">
+                                0.5000
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-rec</div>
+                            <div class="value medium">
+                                0.4200
+                            </div>
+                        </div>
+                        
+                        <div class="score-item">
+                            <div class="label">ROUGEL-fme</div>
+                            <div class="value medium">
+                                0.4600
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>

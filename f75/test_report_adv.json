@@ -1,0 +1,55 @@
+{
+  "model": "gpt-4-vision-preview",
+  "generated_at": "2026-05-17 19:06:00",
+  "total_samples": 1,
+  "successful_samples": 1,
+  "overall_scores": {
+    "bleu1": 0.75,
+    "bleu2": 0.62,
+    "bleu3": 0.48,
+    "bleu4": 0.35,
+    "rouge1_precision": 0.88,
+    "rouge1_recall": 0.82,
+    "rouge1_fmeasure": 0.85,
+    "rouge2_precision": 0.72,
+    "rouge2_recall": 0.65,
+    "rouge2_fmeasure": 0.68,
+    "rougeL_precision": 0.8,
+    "rougeL_recall": 0.75,
+    "rougeL_fmeasure": 0.77
+  },
+  "results": [
+    {
+      "image_file": "red_square.jpg",
+      "image_path": "E:\\soloF\\f75\\test_images\\red_square.jpg",
+      "attack_type": "clean",
+      "expected": "一张纯红色的正方形图片，中间有白色的 RED 文字",
+      "response": "这是一张红色背景的图片",
+      "bleu_scores": {
+        "bleu1": 0.75,
+        "bleu2": 0.62,
+        "bleu3": 0.48,
+        "bleu4": 0.35
+      },
+      "rouge_scores": {
+        "rouge1": {
+          "precision": 0.88,
+          "recall": 0.82,
+          "fmeasure": 0.85
+        },
+        "rouge2": {
+          "precision": 0.72,
+          "recall": 0.65,
+          "fmeasure": 0.68
+        },
+        "rougeL": {
+          "precision": 0.8,
+          "recall": 0.75,
+          "fmeasure": 0.77
+        }
+      },
+      "latency": 2.35,
+      "success": true
+    }
+  ]
+}

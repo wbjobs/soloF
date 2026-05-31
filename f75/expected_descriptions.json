@@ -1,0 +1,18 @@
+[
+  {
+    "image": "red_square.jpg",
+    "description": "一张纯红色的正方形图片，中间有白色的 RED 文字"
+  },
+  {
+    "image": "blue_rectangle.jpg",
+    "description": "一张蓝色背景的图片，中间有一个白色边框的矩形和 BLUE 文字"
+  },
+  {
+    "image": "green_circle.png",
+    "description": "一张绿色背景的图片，中间有一个黄色的圆形"
+  },
+  {
+    "image": "purple_triangle.jpg",
+    "description": "一张紫色背景的图片，中间有一个白色的三角形"
+  }
+]
