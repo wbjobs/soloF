@@ -1,0 +1,5 @@
+2024-01-15T10:30:01.123Z INFO  [gateway] trace_id=abc123def456 Request received: GET /api/v1/order/123
+2024-01-15T10:30:01.125Z INFO  [gateway] trace_id=abc123def456 Routing to auth-service
+2024-01-15T10:30:01.200Z INFO  [gateway] trace_id=abc123def456 Auth passed, forwarding to order-service
+2024-01-15T10:30:02.500Z INFO  [gateway] trace_id=abc123def456 Response sent: 200 OK
+2024-01-15T10:30:05.000Z INFO  [gateway] trace_id=xyz789ghi012 Request received: POST /api/v1/payment

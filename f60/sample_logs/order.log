@@ -1,0 +1,5 @@
+2024-01-15T10:30:01.210Z INFO  [order] trace_id=abc123def456 Fetching order #123 from database
+2024-01-15T10:30:01.400Z DEBUG [order] trace_id=abc123def456 Order found: status=completed, total=$99.99
+2024-01-15T10:30:01.450Z INFO  [order] trace_id=abc123def456 Retrieving payment details
+2024-01-15T10:30:02.000Z INFO  [order] trace_id=abc123def456 Preparing order response
+2024-01-15T10:30:02.450Z INFO  [order] trace_id=abc123def456 Order response ready

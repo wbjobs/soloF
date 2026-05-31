@@ -1,0 +1,4 @@
+2024-01-15T10:30:01.130Z INFO  [auth] trace_id=abc123def456 Validating token for user: user@example.com
+2024-01-15T10:30:01.180Z DEBUG [auth] trace_id=abc123def456 Token valid, roles: [user, admin]
+2024-01-15T10:30:01.190Z INFO  [auth] trace_id=abc123def456 Authentication successful
+2024-01-15T10:30:06.000Z INFO  [auth] trace_id=xyz789ghi012 Validating payment token

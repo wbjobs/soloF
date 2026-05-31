@@ -1,0 +1,36 @@
+{
+  "services": [
+    {
+      "name": "gateway",
+      "host": "192.168.1.100",
+      "user": "admin",
+      "port": 22,
+      "log_path": "/var/log/gateway/app.log",
+      "color": "cyan"
+    },
+    {
+      "name": "auth",
+      "host": "192.168.1.101",
+      "user": "admin",
+      "port": 22,
+      "log_path": "/var/log/auth/app.log",
+      "color": "green"
+    },
+    {
+      "name": "order",
+      "host": "192.168.1.102",
+      "user": "admin",
+      "port": 22,
+      "log_path": "/var/log/order/app.log",
+      "color": "yellow"
+    },
+    {
+      "name": "payment",
+      "host": "192.168.1.103",
+      "user": "admin",
+      "port": 22,
+      "log_path": "/var/log/payment/app.log",
+      "color": "magenta"
+    }
+  ]
+}
