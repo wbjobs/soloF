@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU 流体动力学模拟器</title>
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>WebGPU 流体动力学模拟器</h1>
+        <div class="canvas-container">
+            <canvas id="fluidCanvas"></canvas>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="label">FPS:</span>
+                    <span id="fps" class="value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">粒子数:</span>
+                    <span id="particles" class="value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">计算时间:</span>
+                    <span id="computeTime" class="value">0</span>
+                    <span class="unit">ms</span>
+                </div>
+            </div>
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label class="control-label">涡度强度:</label>
+                    <div class="slider-container">
+                        <input type="range" id="vorticitySlider" min="0" max="100" value="30" class="slider">
+                        <span id="vorticityValue" class="slider-value">30</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">流体材质:</label>
+                    <div class="material-buttons">
+                        <button id="smokeBtn" class="material-btn active">烟雾</button>
+                        <button id="inkBtn" class="material-btn">墨水</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="info">
+            <p>🖱️ 鼠标拖拽添加力场（模拟吹风或扰动）</p>
+            <p>⚙️ 滑块调节涡度强度产生小涡旋效果</p>
+            <p>🎨 切换烟雾/墨水材质呈现不同视觉效果</p>
+        </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
