@@ -1,0 +1,10 @@
+2024-01-15 10:00:00 INFO 应用程序启动成功
+2024-01-15 10:00:01 WARN 内存使用率过高: 85%
+2024-01-15 10:00:02 ERROR 数据库连接失败，请检查配置
+2024-01-15 10:00:03 DEBUG 处理用户请求，用户ID: 12345
+2024-01-15 10:00:04 INFO 订单创建成功，订单号: ORD-2024-00001
+2024-01-15 10:00:05 WARN 用户登录失败次数过多: user@example.com
+2024-01-15 10:00:06 ERROR 支付接口调用超时，交易ID: TXN-88888
+{"timestamp": "2024-01-15T10:00:07Z", "level": "ERROR", "message": "库存不足，无法创建订单", "service": "order-service", "product_id": "PROD-001"}
+{"timestamp": "2024-01-15T10:00:08Z", "level": "WARN", "message": "API限流告警，当前QPS: 950", "service": "api-gateway", "threshold": 1000}
+2024-01-15 10:00:09 INFO 用户张三完成实名认证

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package log_service;
+
+service LogService {
+  rpc SendLogEntries(SendLogEntriesRequest) returns (SendLogEntriesResponse);
+  rpc StreamLogEntries(stream LogEntry) returns (StreamLogEntriesResponse);
+}
+
+message LogEntry {
+  string server_name = 1;
+  string file_path = 2;
+  string content = 3;
+  int64 timestamp = 4;
+  string log_type = 5;
+}
+
+message SendLogEntriesRequest {
+  repeated LogEntry entries = 1;
+}
+
+message SendLogEntriesResponse {
+  bool success = 1;
+  int32 received_count = 2;
+  string message = 3;
+}
+
+message StreamLogEntriesResponse {
+  bool success = 1;
+  int32 received_count = 2;
+  string message = 3;
+}
