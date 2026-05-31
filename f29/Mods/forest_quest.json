@@ -1,0 +1,42 @@
+{
+  "modId": "forest_quest",
+  "modName": "森林任务",
+  "version": "1.0.0",
+  "author": "任务设计师",
+  "npcs": [
+    {
+      "id": "hunter",
+      "name": "老猎人",
+      "dialogueLines": [
+        "年轻的冒险者，你想去森林？",
+        "那里最近很危险，有哥布林出没。",
+        "如果你能消灭它们，我可以教你一些狩猎技巧。",
+        "记得带够药水再去！"
+      ],
+      "position": {
+        "x": 5.0,
+        "y": -3.0
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "leather_armor",
+      "name": "皮甲",
+      "description": "由野兽皮革制成的护甲",
+      "type": "Armor",
+      "value": 80,
+      "attackBonus": 0,
+      "defenseBonus": 8
+    },
+    {
+      "id": "hunter_bow",
+      "name": "猎弓",
+      "description": "老猎人使用过的精良弓箭",
+      "type": "Weapon",
+      "value": 120,
+      "attackBonus": 12,
+      "defenseBonus": 0
+    }
+  ]
+}

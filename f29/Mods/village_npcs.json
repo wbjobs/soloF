@@ -1,0 +1,56 @@
+{
+  "modId": "village_npcs",
+  "modName": "村庄NPC",
+  "version": "1.0.0",
+  "author": "游戏开发者",
+  "npcs": [
+    {
+      "id": "elder",
+      "name": "村长",
+      "dialogueLines": [
+        "欢迎来到我们的小村庄，冒险者！",
+        "近来森林里出现了一些奇怪的生物...",
+        "如果你能帮忙调查，我会给你丰厚的奖励。",
+        "祝你好运，勇敢的旅人！"
+      ],
+      "position": {
+        "x": 2.0,
+        "y": 0.0
+      }
+    },
+    {
+      "id": "merchant",
+      "name": "商人",
+      "dialogueLines": [
+        "嘿，看看我的商品吧！都是好货！",
+        "铁剑只要50金币，性价比超高！",
+        "需要治疗药水吗？我这里应有尽有。",
+        "欢迎下次光临！"
+      ],
+      "position": {
+        "x": -2.0,
+        "y": 1.0
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "iron_sword",
+      "name": "铁剑",
+      "description": "一把普通但耐用的铁剑",
+      "type": "Weapon",
+      "value": 50,
+      "attackBonus": 5,
+      "defenseBonus": 0
+    },
+    {
+      "id": "health_potion",
+      "name": "治疗药水",
+      "description": "恢复生命值的神奇药水",
+      "type": "Consumable",
+      "value": 20,
+      "attackBonus": 0,
+      "defenseBonus": 0
+    }
+  ]
+}
