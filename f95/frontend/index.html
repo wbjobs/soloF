@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONNX 模型调试器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .header .model-info {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 380px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .sidebar-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .file-input-wrapper {
+            position: relative;
+        }
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-primary:disabled {
+            background: #b0b8e0;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #e8eaed;
+            color: #555;
+        }
+        .btn-secondary:hover { background: #dadce0; }
+        .btn-debug {
+            background: #4CAF50;
+            color: white;
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+        }
+        .btn-debug:hover { background: #43a047; }
+        .btn-debug:disabled {
+            background: #a5d6a7;
+            cursor: not-allowed;
+        }
+
+        .node-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .node-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+        .node-item:hover { background: #f5f7fa; }
+        .node-item.selected {
+            background: #e8f0fe;
+            border-left: 3px solid #667eea;
+        }
+        .node-op-type {
+            background: #667eea;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .node-name {
+            font-size: 13px;
+            color: #333;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .search-box {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-config {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .input-row label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        .input-row input {
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+        .input-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .graph-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #fafbfc;
+        }
+        .graph-toolbar {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .graph-toolbar button {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .graph-toolbar button:hover { background: #f5f7fa; }
+        .graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .graph-node {
+            cursor: pointer;
+        }
+        .graph-node.selected rect {
+            stroke: #667eea;
+            stroke-width: 3;
+            filter: drop-shadow(0 2px 6px rgba(102, 126, 234, 0.4));
+        }
+        .graph-node.downstream rect {
+            stroke: #FF9800;
+            stroke-width: 2.5;
+            filter: drop-shadow(0 2px 4px rgba(255, 152, 0, 0.3));
+        }
+        .graph-node.upstream rect {
+            stroke: #2196F3;
+            stroke-width: 2.5;
+        }
+        .graph-node.target rect {
+            stroke: #4CAF50;
+            stroke-width: 3;
+        }
+        .graph-node.pruned rect {
+            stroke: #f44336;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px rgba(244, 67, 54, 0.5));
+        }
+        .graph-edge.downstream {
+            stroke: #FF9800;
+            stroke-width: 2;
+        }
+        .graph-edge.upstream {
+            stroke: #2196F3;
+            stroke-width: 2;
+        }
+        .graph-node rect {
+            transition: all 0.2s;
+        }
+        .graph-node:hover rect {
+            filter: brightness(1.05);
+        }
+        .graph-node text {
+            font-size: 11px;
+            fill: white;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        .graph-edge {
+            stroke: #999;
+            stroke-width: 1.5;
+            fill: none;
+            transition: stroke 0.2s;
+        }
+        .graph-edge.highlighted {
+            stroke: #667eea;
+            stroke-width: 2.5;
+        }
+
+        .results-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 45%;
+            background: white;
+            border-top: 2px solid #667eea;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 5;
+        }
+        .results-panel.open {
+            transform: translateY(0);
+        }
+        .results-header {
+            padding: 12px 16px;
+            background: #f5f7fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+        }
+        .results-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        .results-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            padding: 0 4px;
+        }
+        .results-close:hover { color: #333; }
+        .results-content {
+            padding: 16px;
+        }
+        .tensor-card {
+            background: #fafbfc;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .tensor-card h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .tensor-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .stat-item {
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #e8eaed;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            font-family: monospace;
+        }
+        .tensor-meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .histogram-container {
+            margin-top: 8px;
+        }
+        .histogram-canvas {
+            width: 100%;
+            height: 80px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .prune-panel {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            min-width: 260px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .prune-panel h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .prune-panel .prune-target {
+            font-size: 12px;
+            color: #666;
+            padding: 6px 8px;
+            background: #f5f7fa;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .prune-panel .prune-value-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .prune-panel label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        .prune-panel select,
+        .prune-panel input[type="text"] {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .prune-panel input[type="text"] {
+            font-family: monospace;
+        }
+        .prune-panel .btn-group {
+            display: flex;
+            gap: 6px;
+        }
+        .prune-panel .btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 12px;
+        }
+        .comparison-result {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e8eaed;
+        }
+        .comparison-result .diff-item {
+            padding: 6px 8px;
+            background: #fafbfc;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        .comparison-result .diff-value {
+            font-weight: 600;
+            font-family: monospace;
+        }
+        .diff-increase { color: #f44336; }
+        .diff-decrease { color: #4CAF50; }
+        .legend-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            padding: 8px;
+            background: #fafbfc;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #666;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 2px solid;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .loading-overlay.hidden { display: none; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            gap: 12px;
+        }
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.4;
+        }
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(33, 33, 33, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            word-break: break-all;
+        }
+        .tooltip.hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 ONNX 模型调试器</h1>
+        <div class="model-info" id="modelInfo">未加载模型</div>
+    </div>
+    <div class="main">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <h3>📦 加载模型</h3>
+                <div class="file-input-wrapper">
+                    <label for="fileInput" class="btn btn-primary" style="width:100%">
+                        📁 选择 ONNX 文件
+                    </label>
+                    <input type="file" id="fileInput" accept=".onnx">
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="nodeSelectSection" style="display:none">
+                <h3>🎯 选择目标节点</h3>
+                <input type="text" class="search-box" id="nodeSearch" placeholder="搜索节点名称...">
+                <div class="node-list" id="nodeList"></div>
+            </div>
+
+            <div class="sidebar-section" id="inputConfigSection" style="display:none">
+                <h3>⚙️ 输入配置</h3>
+                <div class="radio-group">
+                    <label><input type="radio" name="inputSource" value="random" checked> 随机生成</label>
+                    <label><input type="radio" name="inputSource" value="file"> 加载 .npy 文件</label>
+                </div>
+                <div id="npyFileInput" style="display:none; margin-bottom:10px">
+                    <div class="file-input-wrapper">
+                        <label for="npyInput" class="btn btn-secondary" style="width:100%">
+                            📄 选择 .npy 文件
+                        </label>
+                        <input type="file" id="npyInput" accept=".npy">
+                    </div>
+                    <div id="npyFileName" style="font-size:12px;color:#666;margin-top:4px"></div>
+                </div>
+                <div id="randomRangeSection">
+                    <label style="font-size:12px;color:#666;font-weight:500">随机范围 (low, high)</label>
+                    <input type="text" id="randomRange" value="-1.0,1.0"
+                           style="width:100%;padding:6px 10px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px;font-family:monospace">
+                </div>
+                <div class="input-config" id="inputShapes"></div>
+            </div>
+
+            <div class="sidebar-section" id="debugSection" style="display:none">
+                <h3>🚀 调试执行</h3>
+                <button class="btn btn-debug" id="debugBtn">🔬 运行调试</button>
+                <div style="font-size:12px;color:#666;margin-top:8px;text-align:center">
+                    执行输入到目标节点的子图推理
+                </div>
+            </div>
+        </div>
+
+        <div class="graph-container" id="graphContainer">
+            <div class="graph-toolbar">
+                <button id="fitBtn">📐 适配</button>
+                <button id="zoomInBtn">+ 放大</button>
+                <button id="zoomOutBtn">- 缩小</button>
+            </div>
+            <div class="prune-panel" id="prunePanel" style="display:none">
+                <h4>✂️ 节点剪枝分析</h4>
+                <div class="prune-target" id="pruneTarget">未选择节点</div>
+                <div class="prune-value-row">
+                    <label>替换为</label>
+                    <select id="pruneValueType">
+                        <option value="zeros">全零 (zeros)</option>
+                        <option value="ones">全一 (ones)</option>
+                        <option value="constant">常量值</option>
+                        <option value="random_normal">高斯噪声 (N(0,1))</option>
+                        <option value="random_uniform">均匀噪声 (-1,1)</option>
+                    </select>
+                </div>
+                <div class="prune-value-row" id="pruneConstantRow" style="display:none">
+                    <label>常量值</label>
+                    <input type="text" id="pruneConstantValue" value="0">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="pruneRunBtn">🔄 运行对比</button>
+                    <button class="btn btn-primary" id="pruneExportBtn">💾 导出剪枝模型</button>
+                </div>
+                <div class="legend-bar">
+                    <div class="legend-item">
+                        <div class="legend-color" style="border-color:#2196F3"></div>
+                        上游依赖
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="border-color:#667eea"></div>
+                        当前节点
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="border-color:#FF9800"></div>
+                        下游影响
+                    </div>
+                </div>
+                <div class="comparison-result" id="comparisonResult" style="display:none">
+                    <h4 style="font-size:12px;margin-bottom:8px">📊 输出差异对比</h4>
+                    <div id="comparisonContent"></div>
+                </div>
+            </div>
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                <p>请先加载一个 .onnx 模型文件</p>
+            </div>
+            <svg class="graph-svg" id="graphSvg"></svg>
+            <div class="tooltip hidden" id="tooltip"></div>
+            <div class="loading-overlay hidden" id="loadingOverlay">
+                <div class="spinner"></div>
+            </div>
+            <div class="results-panel" id="resultsPanel">
+                <div class="results-header">
+                    <h3>📊 调试结果</h3>
+                    <button class="results-close" id="resultsClose">×</button>
+                </div>
+                <div class="results-content" id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+
+        let currentGraph = null;
+        let selectedNode = null;
+        let npyFile = null;
+        let svgPanZoom = { x: 0, y: 0, scale: 1 };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        let cachedLayout = null;
+        let cachedNodePositions = {};
+        let cachedEdges = [];
+        let highlightedEdges = new Set();
+        let renderFrameId = null;
+        let graphContentBBox = null;
+        let outputNameToNodeId = {};
+        let nodeNameToIdLower = {};
+
+        let upstreamNodes = new Set();
+        let downstreamNodes = new Set();
+        let downstreamEdges = new Set();
+        let prunedNode = null;
+        let pruneValueType = 'zeros';
+        let pruneConstantValue = 0;
+        let originalOutputs = null;
+
+        const fileInput = document.getElementById("fileInput");
+        const nodeSearch = document.getElementById("nodeSearch");
+        const nodeList = document.getElementById("nodeList");
+        const nodeSelectSection = document.getElementById("nodeSelectSection");
+        const inputConfigSection = document.getElementById("inputConfigSection");
+        const debugSection = document.getElementById("debugSection");
+        const inputShapes = document.getElementById("inputShapes");
+        const debugBtn = document.getElementById("debugBtn");
+        const modelInfo = document.getElementById("modelInfo");
+        const emptyState = document.getElementById("emptyState");
+        const graphSvg = document.getElementById("graphSvg");
+        const resultsPanel = document.getElementById("resultsPanel");
+        const resultsContent = document.getElementById("resultsContent");
+        const resultsClose = document.getElementById("resultsClose");
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        const tooltip = document.getElementById("tooltip");
+        const npyInput = document.getElementById("npyInput");
+        const npyFileName = document.getElementById("npyFileName");
+        const npyFileInput = document.getElementById("npyFileInput");
+        const randomRangeSection = document.getElementById("randomRangeSection");
+        const randomRange = document.getElementById("randomRange");
+
+        fileInput.addEventListener("change", handleFileUpload);
+        nodeSearch.addEventListener("input", filterNodeList);
+        debugBtn.addEventListener("click", runDebug);
+        resultsClose.addEventListener("click", () => resultsPanel.classList.remove("open"));
+        npyInput.addEventListener("change", handleNpyUpload);
+
+        document.getElementById("pruneValueType").addEventListener("change", (e) => {
+            pruneValueType = e.target.value;
+            document.getElementById("pruneConstantRow").style.display =
+                pruneValueType === "constant" ? "flex" : "none";
+        });
+
+        document.getElementById("pruneConstantValue").addEventListener("change", (e) => {
+            pruneConstantValue = parseFloat(e.target.value) || 0;
+        });
+
+        document.getElementById("pruneRunBtn").addEventListener("click", runPruneComparison);
+        document.getElementById("pruneExportBtn").addEventListener("click", exportPrunedModel);
+
+        document.querySelectorAll('input[name="inputSource"]').forEach(radio => {
+            radio.addEventListener("change", () => {
+                const val = document.querySelector('input[name="inputSource"]:checked').value;
+                npyFileInput.style.display = val === "file" ? "block" : "none";
+                randomRangeSection.style.display = val === "random" ? "block" : "none";
+            });
+        });
+
+        document.getElementById("fitBtn").addEventListener("click", fitGraph);
+        document.getElementById("zoomInBtn").addEventListener("click", () => zoomGraph(1.2));
+        document.getElementById("zoomOutBtn").addEventListener("click", () => zoomGraph(0.8));
+
+        graphSvg.addEventListener("mousedown", (e) => {
+            if (e.target.tagName === "svg" || e.target.tagName === "rect" && !e.target.closest(".graph-node")) {
+                isDragging = true;
+                dragStart = { x: e.clientX - svgPanZoom.x, y: e.clientY - svgPanZoom.y };
+                graphSvg.style.cursor = "grabbing";
+            }
+        });
+        window.addEventListener("mousemove", (e) => {
+            if (isDragging) {
+                svgPanZoom.x = e.clientX - dragStart.x;
+                svgPanZoom.y = e.clientY - dragStart.y;
+                updateTransform();
+            }
+        });
+        window.addEventListener("mouseup", () => {
+            isDragging = false;
+            graphSvg.style.cursor = "grab";
+        });
+        graphSvg.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const factor = e.deltaY > 0 ? 0.9 : 1.1;
+            zoomGraph(factor, e.clientX, e.clientY);
+        }, { passive: false });
+
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            loadingOverlay.classList.remove("hidden");
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const res = await fetch(`${API_BASE}/api/model/upload`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentGraph = data.graph;
+                    modelInfo.textContent = `已加载: ${data.filename} | 节点: ${data.graph.nodes.length}`;
+                    emptyState.style.display = "none";
+                    nodeSelectSection.style.display = "block";
+                    inputConfigSection.style.display = "block";
+                    debugSection.style.display = "block";
+                    populateNodeList();
+                    renderInputShapes(data.resolved_input_shapes);
+                    renderGraph();
+                } else {
+                    alert("加载失败: " + (data.detail || "未知错误"));
+                }
+            } catch (err) {
+                alert("上传错误: " + err.message);
+            } finally {
+                loadingOverlay.classList.add("hidden");
+            }
+        }
+
+        function populateNodeList() {
+            if (!currentGraph) return;
+            nodeList.innerHTML = "";
+            currentGraph.nodes.forEach(node => {
+                const item = document.createElement("div");
+                item.className = "node-item";
+                item.dataset.nodeName = node.id;
+                item.innerHTML = `
+                    <span class="node-op-type">${node.op_type}</span>
+                    <span class="node-name">${node.id}</span>
+                `;
+                item.addEventListener("click", () => selectNode(node.id));
+                nodeList.appendChild(item);
+            });
+        }
+
+        function filterNodeList() {
+            const query = nodeSearch.value.toLowerCase();
+            document.querySelectorAll(".node-item").forEach(item => {
+                const name = item.dataset.nodeName.toLowerCase();
+                item.style.display = name.includes(query) ? "" : "none";
+            });
+        }
+
+        function selectNode(nodeName) {
+            selectedNode = nodeName;
+            prunedNode = nodeName;
+            document.querySelectorAll(".node-item").forEach(item => {
+                item.classList.toggle("selected", item.dataset.nodeName === nodeName);
+            });
+            if (currentGraph) {
+                upstreamNodes = new Set();
+                downstreamNodes = new Set();
+                highlightedEdges = new Set();
+                downstreamEdges = new Set();
+
+                computeSubgraphEdges(nodeName, highlightedEdges);
+                computeDownstreamNodes(nodeName, downstreamNodes, downstreamEdges);
+
+                const visitedForUpstream = new Set();
+                const queueUpstream = [nodeName];
+                visitedForUpstream.add(nodeName);
+                while (queueUpstream.length > 0) {
+                    const curr = queueUpstream.shift();
+                    const node = currentGraph.nodes.find(n => n.id === curr);
+                    if (!node) continue;
+                    node.inputs.forEach(inp => {
+                        const srcNode = findNodeByOutput(inp);
+                        if (srcNode && !visitedForUpstream.has(srcNode)) {
+                            visitedForUpstream.add(srcNode);
+                            queueUpstream.push(srcNode);
+                            upstreamNodes.add(srcNode);
+                        }
+                    });
+                }
+
+                const prunePanel = document.getElementById("prunePanel");
+                prunePanel.style.display = "block";
+                document.getElementById("pruneTarget").textContent = nodeName;
+                document.getElementById("comparisonResult").style.display = "none";
+                originalOutputs = null;
+
+                scheduleUpdateVisible();
+            }
+            debugBtn.disabled = false;
+            debugBtn.textContent = `🔬 调试节点: ${nodeName}`;
+        }
+
+        function renderInputShapes(shapes) {
+            inputShapes.innerHTML = "";
+            if (!currentGraph) return;
+
+            currentGraph.inputs.forEach(inp => {
+                const row = document.createElement("div");
+                row.className = "input-row";
+                const resolved = shapes[inp.name] || [1];
+                const shapeStr = resolved.map(s => typeof s === "number" ? s : "1").join(", ");
+                row.innerHTML = `
+                    <label>${inp.name}</label>
+                    <input type="text" data-input-name="${inp.name}" value="[${shapeStr}]"
+                           placeholder="[batch, channels, height, width]">
+                `;
+                inputShapes.appendChild(row);
+            });
+        }
+
+        function handleNpyUpload(e) {
+            npyFile = e.target.files[0];
+            if (npyFile) {
+                npyFileName.textContent = `已选择: ${npyFile.name}`;
+            }
+        }
+
+        function computeGraphLayout() {
+            if (!currentGraph) return { nodes: [], edges: [] };
+
+            const nodes = currentGraph.nodes;
+            const edges = currentGraph.edges;
+            const nodeW = 160;
+            const nodeH = 40;
+            const hGap = 60;
+            const vGap = 16;
+
+            const nodeMap = {};
+            nodes.forEach(n => nodeMap[n.id] = n);
+
+            const adj = {};
+            const inDeg = {};
+            nodes.forEach(n => { inDeg[n.id] = 0; adj[n.id] = []; });
+            edges.forEach(e => {
+                if (e.to && nodeMap[e.to]) {
+                    adj[e.to].push(e.from);
+                }
+            });
+
+            const levels = {};
+            const visited = new Set();
+            const queue = [];
+
+            nodes.forEach(n => {
+                const hasInput = n.inputs.some(inp =>
+                    inp && !nodeMap[findNodeByOutput(inp)]
+                );
+                if (hasInput) {
+                    levels[n.id] = 0;
+                    queue.push(n.id);
+                    visited.add(n.id);
+                }
+            });
+
+            if (queue.length === 0 && nodes.length > 0) {
+                levels[nodes[0].id] = 0;
+                queue.push(nodes[0].id);
+                visited.add(nodes[0].id);
+            }
+
+            while (queue.length > 0) {
+                const name = queue.shift();
+                const node = nodeMap[name];
+                if (!node) continue;
+
+                const nextLevel = (levels[name] || 0) + 1;
+                node.outputs.forEach(out => {
+                    edges.forEach(e => {
+                        if (e.from === out && e.to && nodeMap[e.to] && !visited.has(e.to)) {
+                            visited.add(e.to);
+                            levels[e.to] = nextLevel;
+                            queue.push(e.to);
+                        }
+                    });
+                });
+            }
+
+            nodes.forEach(n => {
+                if (!levels.hasOwnProperty(n.id)) levels[n.id] = 0;
+            });
+
+            const levelGroups = {};
+            nodes.forEach(n => {
+                const lv = levels[n.id];
+                if (!levelGroups[lv]) levelGroups[lv] = [];
+                levelGroups[lv].push(n);
+            });
+
+            const layoutNodes = [];
+            Object.keys(levelGroups).sort((a, b) => a - b).forEach(lv => {
+                const group = levelGroups[lv];
+                const totalH = group.length * nodeH + (group.length - 1) * vGap;
+                group.forEach((n, i) => {
+                    const x = parseInt(lv) * (nodeW + hGap) + 20;
+                    const y = i * (nodeH + vGap) + 20;
+                    layoutNodes.push({
+                        id: n.id,
+                        op_type: n.op_type,
+                        x, y, w: nodeW, h: nodeH
+                    });
+                });
+            });
+
+            return { nodes: layoutNodes, edges: edges.map(e => ({ from: e.from, to: e.to, label: e.label })) };
+        }
+
+        function findNodeByOutput(outputName) {
+            if (!currentGraph) return null;
+            const lower = outputName.toLowerCase();
+            if (outputNameToNodeId[outputName]) return outputNameToNodeId[outputName];
+            if (outputNameToNodeId[lower]) return outputNameToNodeId[lower];
+            for (const n of currentGraph.nodes) {
+                if (n.outputs.includes(outputName)) return n.id;
+                if (n.outputs.some(o => o.toLowerCase() === lower)) return n.id;
+            }
+            return null;
+        }
+
+        function buildNodeMaps() {
+            outputNameToNodeId = {};
+            nodeNameToIdLower = {};
+            if (!currentGraph) return;
+            currentGraph.nodes.forEach(n => {
+                n.outputs.forEach(o => {
+                    if (o) {
+                        outputNameToNodeId[o] = n.id;
+                        outputNameToNodeId[o.toLowerCase()] = n.id;
+                    }
+                });
+                if (n.id) {
+                    nodeNameToIdLower[n.id.toLowerCase()] = n.id;
+                }
+            });
+        }
+
+        function renderGraph() {
+            const layout = computeGraphLayout();
+            cachedLayout = layout;
+            cachedEdges = layout.edges;
+
+            cachedNodePositions = {};
+            layout.nodes.forEach(n => cachedNodePositions[n.id] = n);
+
+            buildNodeMaps();
+
+            graphSvg.innerHTML = "";
+            svgPanZoom = { x: 0, y: 0, scale: 1 };
+
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("id", "graphGroup");
+            graphSvg.appendChild(g);
+
+            const edgeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            edgeGroup.setAttribute("id", "edgeGroup");
+            g.appendChild(edgeGroup);
+
+            const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            nodeGroup.setAttribute("id", "nodeGroup");
+            g.appendChild(nodeGroup);
+
+            const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            defs.innerHTML = `
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#999"/>
+                </marker>
+                <marker id="arrow-highlighted" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#667eea"/>
+                </marker>
+            `;
+            g.appendChild(defs);
+
+            highlightedEdges = new Set();
+            if (selectedNode) {
+                computeSubgraphEdges(selectedNode, highlightedEdges);
+            }
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            layout.nodes.forEach(n => {
+                minX = Math.min(minX, n.x);
+                minY = Math.min(minY, n.y);
+                maxX = Math.max(maxX, n.x + n.w);
+                maxY = Math.max(maxY, n.y + n.h);
+            });
+            graphContentBBox = { x: minX - 40, y: minY - 40, width: maxX - minX + 80, height: maxY - minY + 80 };
+
+            graphSvg.setAttribute("viewBox", `${graphContentBBox.x} ${graphContentBBox.y} ${graphContentBBox.width} ${graphContentBBox.height}`);
+
+            updateTransform();
+            scheduleUpdateVisible();
+        }
+
+        function scheduleUpdateVisible() {
+            if (renderFrameId) return;
+            renderFrameId = requestAnimationFrame(() => {
+                renderFrameId = null;
+                updateVisibleElements();
+            });
+        }
+
+        function getViewportBounds() {
+            if (!graphContentBBox) return { x: 0, y: 0, width: 1000, height: 1000 };
+
+            const svgRect = graphSvg.getBoundingClientRect();
+            const scale = svgPanZoom.scale;
+            const viewWidth = svgRect.width / scale;
+            const viewHeight = svgRect.height / scale;
+
+            const viewBox = graphSvg.getAttribute("viewBox");
+            let vbX, vbY, vbW, vbH;
+            if (viewBox) {
+                const parts = viewBox.split(/\s+/).map(Number);
+                vbX = parts[0]; vbY = parts[1]; vbW = parts[2]; vbH = parts[3];
+            } else {
+                vbX = 0; vbY = 0; vbW = svgRect.width; vbH = svgRect.height;
+            }
+
+            const scaleX = vbW / svgRect.width;
+            const scaleY = vbH / svgRect.height;
+
+            const offsetX = -svgPanZoom.x / scale * scaleX;
+            const offsetY = -svgPanZoom.y / scale * scaleY;
+
+            return {
+                x: vbX + offsetX,
+                y: vbY + offsetY,
+                width: viewWidth * scaleX,
+                height: viewHeight * scaleY
+            };
+        }
+
+        function updateVisibleElements() {
+            if (!cachedLayout || !graphContentBBox) return;
+
+            const viewport = getViewportBounds();
+            const padding = 100;
+            const viewX = viewport.x - padding;
+            const viewY = viewport.y - padding;
+            const viewW = viewport.width + padding * 2;
+            const viewH = viewport.height + padding * 2;
+
+            const largeGraph = cachedLayout.nodes.length > 100;
+            const skipMarkers = cachedLayout.nodes.length > 200;
+
+            const visibleNodeIds = new Set();
+            const visibleNodes = [];
+
+            for (let i = 0; i < cachedLayout.nodes.length; i++) {
+                const n = cachedLayout.nodes[i];
+                if (n.x + n.w >= viewX && n.x <= viewX + viewW &&
+                    n.y + n.h >= viewY && n.y <= viewY + viewH) {
+                    visibleNodeIds.add(n.id);
+                    visibleNodes.push(n);
+                }
+            }
+
+            if (selectedNode) {
+                if (!visibleNodeIds.has(selectedNode) && cachedNodePositions[selectedNode]) {
+                    visibleNodes.push(cachedNodePositions[selectedNode]);
+                    visibleNodeIds.add(selectedNode);
+                }
+            }
+
+            const nodeGroup = document.getElementById("nodeGroup");
+            const edgeGroup = document.getElementById("edgeGroup");
+            if (!nodeGroup || !edgeGroup) return;
+
+            const nodeFragment = document.createDocumentFragment();
+            const edgeFragment = document.createDocumentFragment();
+
+            const nodeElements = {};
+
+            for (let i = 0; i < visibleNodes.length; i++) {
+                const n = visibleNodes[i];
+                const gNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+                let nodeClasses = "graph-node";
+                if (n.id === selectedNode) {
+                    nodeClasses += " selected target";
+                }
+                if (n.id === prunedNode) {
+                    nodeClasses += " pruned";
+                }
+                if (downstreamNodes.has(n.id) && n.id !== selectedNode) {
+                    nodeClasses += " downstream";
+                }
+                if (upstreamNodes.has(n.id) && n.id !== selectedNode) {
+                    nodeClasses += " upstream";
+                }
+
+                gNode.setAttribute("class", nodeClasses);
+                gNode.setAttribute("transform", `translate(${n.x}, ${n.y})`);
+                gNode.setAttribute("data-node-id", n.id);
+
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("width", n.w);
+                rect.setAttribute("height", n.h);
+                rect.setAttribute("rx", 6);
+                rect.setAttribute("fill", getColorForOp(n.op_type));
+                gNode.appendChild(rect);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", n.w / 2);
+                text.setAttribute("y", n.h / 2 - 8);
+                text.setAttribute("font-weight", "600");
+                text.textContent = n.op_type;
+                gNode.appendChild(text);
+
+                const text2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text2.setAttribute("x", n.w / 2);
+                text2.setAttribute("y", n.h / 2 + 8);
+                text2.setAttribute("font-size", "9");
+                text2.setAttribute("fill", "rgba(255,255,255,0.8)");
+                const displayName = n.id.length > 18 ? n.id.substring(0, 16) + "..." : n.id;
+                text2.textContent = displayName;
+                gNode.appendChild(text2);
+
+                gNode.addEventListener("click", () => selectNode(n.id));
+                gNode.addEventListener("mouseenter", (e) => showTooltip(e, n));
+                gNode.addEventListener("mousemove", (e) => moveTooltip(e));
+                gNode.addEventListener("mouseleave", hideTooltip);
+
+                nodeFragment.appendChild(gNode);
+                nodeElements[n.id] = gNode;
+            }
+
+            const renderedEdges = 0;
+            const maxEdges = largeGraph ? Math.min(800, cachedEdges.length) : cachedEdges.length;
+            let edgeCount = 0;
+
+            for (let i = 0; i < cachedEdges.length && edgeCount < maxEdges; i++) {
+                const e = cachedEdges[i];
+                const fromNode = findNodeByOutput(e.from);
+                const toNode = e.to;
+
+                if (!fromNode || !toNode) continue;
+
+                const src = cachedNodePositions[fromNode];
+                const dst = cachedNodePositions[toNode];
+                if (!src || !dst) continue;
+
+                const hasVisibleEndpoint = visibleNodeIds.has(fromNode) || visibleNodeIds.has(toNode);
+                const isHighlighted = highlightedEdges.has(e.from + "->" + e.to);
+                const isDownstream = downstreamEdges.has(e.from + "->" + e.to);
+                const isUpstream = isHighlighted && !isDownstream;
+
+                if (!hasVisibleEndpoint && !isHighlighted && !isDownstream) continue;
+
+                const x1 = src.x + src.w;
+                const y1 = src.y + src.h / 2;
+                const x2 = dst.x;
+                const y2 = dst.y + dst.h / 2;
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+                if (largeGraph) {
+                    const midX = (x1 + x2) / 2;
+                    const d = `M ${x1} ${y1} L ${x2} ${y2}`;
+                    path.setAttribute("d", d);
+                } else {
+                    const midX = (x1 + x2) / 2;
+                    const d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+                    path.setAttribute("d", d);
+                }
+
+                let edgeClass = "graph-edge";
+                if (isDownstream) {
+                    edgeClass += " downstream";
+                } else if (isUpstream) {
+                    edgeClass += " upstream";
+                } else if (isHighlighted) {
+                    edgeClass += " highlighted";
+                }
+                path.setAttribute("class", edgeClass);
+
+                if (!skipMarkers || isHighlighted) {
+                    path.setAttribute("marker-end", isHighlighted ? "url(#arrow-highlighted)" : "url(#arrow)");
+                }
+
+                edgeFragment.appendChild(path);
+                edgeCount++;
+            }
+
+            edgeGroup.innerHTML = "";
+            edgeGroup.appendChild(edgeFragment);
+
+            nodeGroup.innerHTML = "";
+            nodeGroup.appendChild(nodeFragment);
+        }
+
+        function updateTransform() {
+            const g = document.getElementById("graphGroup");
+            if (g) {
+                g.setAttribute("transform", `translate(${svgPanZoom.x}, ${svgPanZoom.y}) scale(${svgPanZoom.scale})`);
+            }
+            scheduleUpdateVisible();
+        }
+
+        function computeSubgraphEdges(targetName, edgeSet) {
+            const targetLower = targetName.toLowerCase();
+            const target = currentGraph.nodes.find(n =>
+                n.id === targetName ||
+                (n.id && n.id.toLowerCase() === targetLower) ||
+                n.outputs.some(o => o && o.toLowerCase() === targetLower)
+            );
+            if (!target) return;
+            const visited = new Set();
+            const queue = [target.id];
+            visited.add(target.id);
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                const node = currentGraph.nodes.find(n => n.id === curr);
+                if (!node) continue;
+                node.inputs.forEach(inp => {
+                    const srcNode = findNodeByOutput(inp);
+                    if (srcNode && !visited.has(srcNode)) {
+                        visited.add(srcNode);
+                        queue.push(srcNode);
+                        edgeSet.add(inp + "->" + curr);
+                    }
+                });
+            }
+        }
+
+        function computeDownstreamNodes(targetName, downstreamSet, edgeSet) {
+            const targetLower = targetName.toLowerCase();
+            const target = currentGraph.nodes.find(n =>
+                n.id === targetName ||
+                (n.id && n.id.toLowerCase() === targetLower) ||
+                n.outputs.some(o => o && o.toLowerCase() === targetLower)
+            );
+            if (!target) return;
+
+            const visited = new Set();
+            const queue = [target.id];
+            visited.add(target.id);
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                const node = currentGraph.nodes.find(n => n.id === curr);
+                if (!node) continue;
+
+                node.outputs.forEach(outName => {
+                    currentGraph.edges.forEach(e => {
+                        if (e.from === outName && e.to && !visited.has(e.to)) {
+                            visited.add(e.to);
+                            queue.push(e.to);
+                            downstreamSet.add(e.to);
+                            edgeSet.add(e.from + "->" + e.to);
+                        }
+                    });
+                });
+            }
+        }
+
+        function getColorForOp(opType) {
+            const colors = {
+                "Conv": "#4285F4",
+                "Relu": "#EA4335",
+                "Sigmoid": "#FBBC05",
+                "Tanh": "#34A853",
+                "Add": "#9C27B0",
+                "Mul": "#FF9800",
+                "MatMul": "#00BCD4",
+                "Gemm": "#607D8B",
+                "Reshape": "#795548",
+                "Transpose": "#E91E63",
+                "Concat": "#3F51B5",
+                "Split": "#009688",
+                "MaxPool": "#FF5722",
+                "AveragePool": "#8BC34A",
+                "GlobalAveragePool": "#CDDC39",
+                "BatchNormalization": "#2196F3",
+                "Dropout": "#9E9E9E",
+                "Softmax": "#673AB7",
+                "Flatten": "#FFC107",
+                "Identity": "#78909C",
+                "Constant": "#546E7A",
+                "Shape": "#455A64",
+                "Gather": "#37474F",
+                "Slice": "#263238",
+                "Pad": "#1A237E",
+                "Unsqueeze": "#0D47A1",
+                "Squeeze": "#01579B",
+                "ReduceMean": "#004D40",
+                "ReduceMax": "#1B5E20",
+                "ReduceSum": "#33691E",
+                "Pow": "#BF360C",
+                "Sqrt": "#E65100",
+                "Exp": "#FF6F00",
+                "Log": "#FF8F00",
+                "Abs": "#FFA000",
+                "Neg": "#FFB300",
+                "Where": "#FFC107",
+                "Equal": "#FFEB3B",
+                "Greater": "#CDDC39",
+                "Less": "#8BC34A",
+                "And": "#689F38",
+                "Or": "#7CB342",
+                "Not": "#9CCC65",
+                "Cast": "#AED581",
+                "Clip": "#C5E1A5",
+                "Resize": "#DCE775",
+                "Crop": "#E6EE9C",
+                "Normalize": "#FFF59D",
+                "LSTM": "#FFECB3",
+                "GRU": "#FFE0B2",
+                "RNN": "#FFCC80",
+                "Attention": "#FFAB91",
+                "LayerNormalization": "#FF8A65",
+                "InstanceNormalization": "#FF7043",
+                "GroupNormalization": "#F4511E",
+            };
+            return colors[opType] || "#607D8B";
+        }
+
+        function showTooltip(e, node) {
+            let html = `<strong>${node.op_type}</strong><br>${node.id}`;
+            const graphNode = currentGraph.nodes.find(n => n.id === node.id);
+            if (graphNode) {
+                if (graphNode.inputs.length) {
+                    html += `<br><br><span style="color:#aaa">Inputs:</span><br>${graphNode.inputs.filter(i=>i).map(i=>`• ${i}`).join("<br>")}`;
+                }
+                if (graphNode.outputs.length) {
+                    html += `<br><br><span style="color:#aaa">Outputs:</span><br>${graphNode.outputs.filter(i=>i).map(i=>`• ${i}`).join("<br>")}`;
+                }
+                if (graphNode.attributes && Object.keys(graphNode.attributes).length) {
+                    html += `<br><br><span style="color:#aaa">Attributes:</span>`;
+                    Object.entries(graphNode.attributes).forEach(([k,v]) => {
+                        const val = Array.isArray(v) ? v.slice(0,5).join(",") + (v.length>5?"...":"") : v;
+                        html += `<br>  ${k}: ${val}`;
+                    });
+                }
+            }
+            tooltip.innerHTML = html;
+            tooltip.classList.remove("hidden");
+            moveTooltip(e);
+        }
+
+        function moveTooltip(e) {
+            tooltip.style.left = (e.clientX + 12) + "px";
+            tooltip.style.top = (e.clientY + 12) + "px";
+        }
+
+        function hideTooltip() {
+            tooltip.classList.add("hidden");
+        }
+
+        function zoomGraph(factor, cx, cy) {
+            svgPanZoom.scale *= factor;
+            svgPanZoom.scale = Math.max(0.2, Math.min(5, svgPanZoom.scale));
+            if (cx !== undefined) {
+                svgPanZoom.x = cx - (cx - svgPanZoom.x) * factor;
+                svgPanZoom.y = cy - (cy - svgPanZoom.y) * factor;
+            }
+            updateTransform();
+            scheduleUpdateVisible();
+        }
+
+        function fitGraph() {
+            svgPanZoom = { x: 0, y: 0, scale: 1 };
+            updateTransform();
+            scheduleUpdateVisible();
+        }
+
+        function parseShapeInput(inputStr) {
+            try {
+                const cleaned = inputStr.replace(/[\[\]\(\)]/g, "").trim();
+                if (!cleaned) return [1];
+                return cleaned.split(/[,x]/).map(s => parseInt(s.trim()) || 1);
+            } catch {
+                return [1];
+            }
+        }
+
+        async function runDebug() {
+            if (!selectedNode || !currentGraph) {
+                alert("请先选择一个目标节点");
+                return;
+            }
+
+            loadingOverlay.classList.remove("hidden");
+            resultsPanel.classList.remove("open");
+
+            try {
+                const inputSource = document.querySelector('input[name="inputSource"]:checked').value;
+
+                const shapeInputs = document.querySelectorAll("#inputShapes input[data-input-name]");
+                const inputShapesData = {};
+                shapeInputs.forEach(inp => {
+                    const name = inp.dataset.inputName;
+                    inputShapesData[name] = parseShapeInput(inp.value);
+                });
+
+                let randomRangeData = {};
+                if (inputSource === "random") {
+                    const parts = randomRange.value.split(",").map(s => parseFloat(s.trim()));
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        Object.keys(inputShapesData).forEach(name => {
+                            randomRangeData[name] = [parts[0], parts[1]];
+                        });
+                    }
+                }
+
+                const formData = new FormData();
+                formData.append("target_node_name", selectedNode);
+                formData.append("input_shape", JSON.stringify(inputShapesData));
+                formData.append("random_range", JSON.stringify(randomRangeData));
+                if (npyFile && inputSource === "file") {
+                    formData.append("npy_file", npyFile);
+                }
+
+                const res = await fetch(`${API_BASE}/api/model/debug_with_file`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    displayResults(data);
+                } else {
+                    alert("调试失败: " + (data.detail || "未知错误"));
+                }
+            } catch (err) {
+                alert("调试错误: " + err.message);
+            } finally {
+                loadingOverlay.classList.add("hidden");
+            }
+        }
+
+        async function runPruneComparison() {
+            if (!prunedNode || !currentGraph) {
+                alert("请先选择一个要剪枝的节点");
+                return;
+            }
+
+            loadingOverlay.classList.remove("hidden");
+
+            try {
+                const shapeInputs = document.querySelectorAll("#inputShapes input[data-input-name]");
+                const inputShapesData = {};
+                shapeInputs.forEach(inp => {
+                    const name = inp.dataset.inputName;
+                    inputShapesData[name] = parseShapeInput(inp.value);
+                });
+
+                const parts = randomRange.value.split(",").map(s => parseFloat(s.trim()));
+                let randomRangeData = {};
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    Object.keys(inputShapesData).forEach(name => {
+                        randomRangeData[name] = [parts[0], parts[1]];
+                    });
+                }
+
+                const graphOutputs = currentGraph.outputs.map(o => o.name);
+                const targetNode = graphOutputs.length > 0 ? graphOutputs[graphOutputs.length - 1] : prunedNode;
+
+                const payload = {
+                    prune_node_name: prunedNode,
+                    prune_type: pruneValueType,
+                    constant_value: pruneConstantValue,
+                    target_node_name: targetNode,
+                    input_shape: inputShapesData,
+                    random_range: randomRangeData
+                };
+
+                const res = await fetch(`${API_BASE}/api/model/prune_compare`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    displayPruneComparison(data);
+                } else {
+                    alert("剪枝对比失败: " + (data.detail || "未知错误"));
+                }
+            } catch (err) {
+                alert("剪枝错误: " + err.message);
+            } finally {
+                loadingOverlay.classList.add("hidden");
+            }
+        }
+
+        async function exportPrunedModel() {
+            if (!prunedNode || !currentGraph) {
+                alert("请先选择一个要剪枝的节点");
+                return;
+            }
+
+            loadingOverlay.classList.remove("hidden");
+
+            try {
+                const payload = {
+                    prune_node_name: prunedNode,
+                    prune_type: pruneValueType,
+                    constant_value: pruneConstantValue
+                };
+
+                const res = await fetch(`${API_BASE}/api/model/export_pruned`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    const safeName = prunedNode.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 50);
+                    a.download = `pruned_${safeName}.onnx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const data = await res.json();
+                    alert("导出失败: " + (data.detail || "未知错误"));
+                }
+            } catch (err) {
+                alert("导出错误: " + err.message);
+            } finally {
+                loadingOverlay.classList.add("hidden");
+            }
+        }
+
+        function displayPruneComparison(data) {
+            const compPanel = document.getElementById("comparisonResult");
+            const compContent = document.getElementById("comparisonContent");
+            compContent.innerHTML = "";
+
+            if (!data.comparison) {
+                compContent.innerHTML = '<div style="font-size:12px;color:#f44336">无对比数据</div>';
+                compPanel.style.display = "block";
+                return;
+            }
+
+            Object.entries(data.comparison).forEach(([name, comp]) => {
+                const diff = comp.difference;
+                const isSignificant = diff && diff.mean_absolute_error > 1e-6;
+
+                let html = `<div class="diff-item">
+                    <div style="font-weight:600;margin-bottom:4px">${name}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;font-size:11px">
+                        <div><span style="color:#666">原始 mean:</span> <code>${comp.original.mean !== null ? comp.original.mean.toFixed(6) : 'N/A'}</code></div>
+                        <div><span style="color:#666">剪枝后 mean:</span> <code>${comp.pruned.mean !== null ? comp.pruned.mean.toFixed(6) : 'N/A'}</code></div>
+                    </div>`;
+
+                if (diff) {
+                    if (diff.mean_absolute_error !== null) {
+                        const color = isSignificant ? 'diff-increase' : '';
+                        html += `<div style="margin-top:4px">
+                            <span style="color:#666">MAE:</span>
+                            <span class="diff-value ${color}">${diff.mean_absolute_error.toExponential(4)}</span>
+                            <span style="color:#666;margin-left:10px">Max AE:</span>
+                            <span class="diff-value ${color}">${diff.max_absolute_error.toExponential(4)}</span>
+                        </div>`;
+                    }
+                    if (diff.cosine_similarity !== null) {
+                        const simColor = diff.cosine_similarity < 0.99 ? 'diff-increase' : 'diff-decrease';
+                        html += `<div style="margin-top:2px">
+                            <span style="color:#666">Cosine 相似度:</span>
+                            <span class="diff-value ${simColor}">${diff.cosine_similarity.toFixed(6)}</span>
+                        </div>`;
+                    }
+                }
+
+                html += `</div>`;
+                compContent.innerHTML += html;
+            });
+
+            if (Object.keys(data.comparison).length > 0) {
+                const firstKey = Object.keys(data.comparison)[0];
+                const firstDiff = data.comparison[firstKey].difference;
+                const importanceScore = firstDiff ? (firstDiff.mean_absolute_error || 0) : 0;
+                const importanceLevel = importanceScore > 1e-3 ? "🔴 高" : importanceScore > 1e-6 ? "🟡 中" : "🟢 低";
+                const importanceHtml = `<div style="margin-top:8px;padding:8px;background:#fafafa;border-radius:4px;font-size:12px">
+                    <strong>节点重要性评分:</strong> ${importanceLevel}
+                    <div style="font-size:11px;color:#666;margin-top:2px">MAE: ${importanceScore.toExponential(4)}</div>
+                </div>`;
+                compContent.innerHTML += importanceHtml;
+            }
+
+            compPanel.style.display = "block";
+        }
+
+        function displayResults(data) {
+            resultsContent.innerHTML = "";
+
+            if (data.input_info) {
+                const infoCard = document.createElement("div");
+                infoCard.className = "tensor-card";
+                let infoHtml = "<h4>📥 输入信息</h4>";
+                Object.entries(data.input_info).forEach(([name, info]) => {
+                    infoHtml += `<div style="font-size:13px;margin-bottom:4px">
+                        <strong>${name}:</strong> shape=${JSON.stringify(info.shape)}, dtype=${info.dtype}, range=[${info.min?.toFixed(4)}, ${info.max?.toFixed(4)}]
+                    </div>`;
+                });
+                infoCard.innerHTML = infoHtml;
+                resultsContent.appendChild(infoCard);
+            }
+
+            Object.entries(data.outputs).forEach(([name, stats]) => {
+                const card = document.createElement("div");
+                card.className = "tensor-card";
+
+                let cardHtml = `<h4>📤 ${name}</h4>`;
+                cardHtml += `<div class="tensor-meta">
+                    Shape: ${JSON.stringify(stats.shape)} | Dtype: ${stats.dtype} | 元素数: ${stats.num_elements}
+                </div>`;
+
+                if (stats.min !== null) {
+                    cardHtml += `<div class="tensor-stats">
+                        <div class="stat-item"><div class="stat-label">Min</div><div class="stat-value">${stats.min.toFixed(6)}</div></div>
+                        <div class="stat-item"><div class="stat-label">Max</div><div class="stat-value">${stats.max.toFixed(6)}</div></div>
+                        <div class="stat-item"><div class="stat-label">Mean</div><div class="stat-value">${stats.mean.toFixed(6)}</div></div>
+                        <div class="stat-item"><div class="stat-label">Std</div><div class="stat-value">${stats.std.toFixed(6)}</div></div>
+                    </div>`;
+
+                    if (stats.histogram) {
+                        cardHtml += `<div class="histogram-container">
+                            <canvas class="histogram-canvas" id="hist-${name.replace(/[^a-zA-Z0-9]/g, '_')}"></canvas>
+                        </div>`;
+                    }
+                }
+
+                card.innerHTML = cardHtml;
+                resultsContent.appendChild(card);
+
+                if (stats.histogram) {
+                    setTimeout(() => drawHistogram(
+                        document.getElementById(`hist-${name.replace(/[^a-zA-Z0-9]/g, '_')}`),
+                        stats.histogram.counts,
+                        stats.histogram.bin_edges
+                    ), 0);
+                }
+            });
+
+            resultsPanel.classList.add("open");
+        }
+
+        function drawHistogram(canvas, counts, binEdges) {
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const W = canvas.width = canvas.offsetWidth;
+            const H = canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, W, H);
+
+            const maxCount = Math.max(...counts);
+            const barW = W / counts.length;
+
+            counts.forEach((count, i) => {
+                const barH = (count / maxCount) * (H - 20);
+                const hue = 240 - (count / maxCount) * 240;
+                ctx.fillStyle = `hsl(${hue}, 60%, 50%)`;
+                ctx.fillRect(i * barW, H - barH - 16, barW - 1, barH);
+            });
+
+            ctx.fillStyle = "#666";
+            ctx.font = "10px monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(binEdges[0].toFixed(2), 2, H - 2);
+            ctx.textAlign = "right";
+            ctx.fillText(binEdges[binEdges.length-1].toFixed(2), W - 2, H - 2);
+
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#999";
+            ctx.font = "9px sans-serif";
+            ctx.fillText("min", 20, H - 14);
+            ctx.fillText("max", W - 20, H - 14);
+        }
+
+        async function checkHealth() {
+            try {
+                await fetch(`${API_BASE}/api/health`);
+            } catch {
+                console.warn("Backend not reachable at " + API_BASE);
+            }
+        }
+
+        checkHealth();
+    </script>
+</body>
+</html>
