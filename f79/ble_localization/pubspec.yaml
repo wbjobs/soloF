@@ -1,0 +1,24 @@
+name: ble_localization
+description: BLE indoor localization app using weighted centroid algorithm
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_blue_plus: ^1.31.16
+  permission_handler: ^11.0.1
+  grpc: ^3.2.4
+  protobuf: ^3.1.0
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

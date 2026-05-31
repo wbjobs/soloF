@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package beaconconfig;
+
+option java_multiple_files = true;
+option java_package = "com.example.blelocalization";
+option java_outer_classname = "BeaconConfigProto";
+option objc_class_prefix = "BCP";
+
+service BeaconConfigService {
+  rpc GetBeaconConfigs(GetBeaconConfigsRequest) returns (GetBeaconConfigsResponse);
+  rpc UpdateBeaconConfig(UpdateBeaconConfigRequest) returns (UpdateBeaconConfigResponse);
+  rpc SyncBeaconConfigs(SyncBeaconConfigsRequest) returns (SyncBeaconConfigsResponse);
+  rpc SubscribeBeaconConfigUpdates(SubscribeBeaconConfigUpdatesRequest) returns (stream BeaconConfigUpdate);
+}
+
+message BeaconConfig {
+  string identifier = 1;
+  double x = 2;
+  double y = 3;
+  string description = 4;
+  int64 updated_at = 5;
+  string updated_by = 6;
+}
+
+message GetBeaconConfigsRequest {
+  string device_id = 1;
+}
+
+message GetBeaconConfigsResponse {
+  repeated BeaconConfig configs = 1;
+  int64 version = 2;
+}
+
+message UpdateBeaconConfigRequest {
+  string device_id = 1;
+  BeaconConfig config = 2;
+}
+
+message UpdateBeaconConfigResponse {
+  bool success = 1;
+  BeaconConfig config = 2;
+  string message = 3;
+}
+
+message SyncBeaconConfigsRequest {
+  string device_id = 1;
+  repeated BeaconConfig configs = 2;
+  int64 client_version = 3;
+}
+
+message SyncBeaconConfigsResponse {
+  bool success = 1;
+  repeated BeaconConfig updated_configs = 2;
+  int64 server_version = 3;
+  string message = 4;
+}
+
+message SubscribeBeaconConfigUpdatesRequest {
+  string device_id = 1;
+  int64 last_known_version = 2;
+}
+
+message BeaconConfigUpdate {
+  BeaconConfig config = 1;
+  UpdateType type = 2;
+  int64 version = 3;
+  string updated_by = 4;
+}
+
+enum UpdateType {
+  UNKNOWN = 0;
+  CREATED = 1;
+  UPDATED = 2;
+  DELETED = 3;
+}
