@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+app:
+  websocket:
+    endpoint: /ws/alerts
+  redis:
+    alert-key-prefix: alert:
+    user-alerts-prefix: user:alerts:
+    recent-alerts-key: alerts:recent
+    user-alert-count-key: user:alert:count
+    alert-rate-prefix: alert:rate:
+    transaction-count-prefix: transaction:count:
+    alert-total-key: alert:total

@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时交易异常检测监控系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+        }
+
+        .stat-card h3 {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stat-card.total .value {
+            color: #ff6b6b;
+        }
+
+        .stat-card.rate .value {
+            color: #ffd93d;
+        }
+
+        .stat-card.users .value {
+            color: #6bcf7f;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .chart-box h2 {
+            color: #e0e0e0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        #rateChart {
+            height: 350px;
+        }
+
+        #topUsersChart {
+            height: 350px;
+        }
+
+        .bottom-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        #typeDistribution {
+            height: 300px;
+        }
+
+        .alerts-table {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alerts-table h2 {
+            color: #e0e0e0;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .alerts-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .alerts-table th,
+        .alerts-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .alerts-table th {
+            color: #888;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .alerts-table td {
+            font-size: 0.9em;
+        }
+
+        .severity-high {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .severity-critical {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .alert-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .type-HIGH_FREQUENCY {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .type-SUDDEN_AMOUNT_INCREASE {
+            background: rgba(255, 217, 61, 0.2);
+            color: #ffd93d;
+        }
+
+        .type-CROSS_REGION_LOGIN {
+            background: rgba(123, 47, 247, 0.2);
+            color: #7b2ff7;
+        }
+
+        .type-ML_ANOMALY {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+        }
+
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .status-connected {
+            background: rgba(107, 207, 127, 0.2);
+            color: #6bcf7f;
+        }
+
+        .status-disconnected {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .connected .status-dot {
+            background: #6bcf7f;
+            animation: pulse 2s infinite;
+        }
+
+        .status-disconnected .status-dot {
+            background: #ff6b6b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 1200px) {
+            .charts-container,
+            .bottom-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 实时交易异常检测监控系统</h1>
+            <p>
+                Apache Flink + Kafka + Redis 实时流处理
+                <span id="connectionStatus" class="connection-status status-disconnected">
+                    <span class="status-dot"></span>
+                    <span id="statusText">连接中...</span>
+                </span>
+            </p>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card total">
+                <h3>总告警数</h3>
+                <div class="value" id="totalAlerts">0</div>
+            </div>
+            <div class="stat-card rate">
+                <h3>当前异常率</h3>
+                <div class="value" id="currentRate">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>活跃用户数</h3>
+                <div class="value" id="activeUsers">0</div>
+            </div>
+            <div class="stat-card users">
+                <h3>今日告警数/分钟</h3>
+                <div class="value" id="alertsPerMinute">0</div>
+            </div>
+            <div class="stat-card" style="border-color: #00d4ff;">
+                <h3>ML模型版本</h3>
+                <div class="value" id="mlModelVersion" style="color: #00d4ff; font-size: 1.8em;">-</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-box">
+                <h2>📈 异常率趋势（近30分钟）</h2>
+                <div id="rateChart"></div>
+            </div>
+            <div class="chart-box">
+                <h2>👥 Top 10 异常用户</h2>
+                <div id="topUsersChart"></div>
+            </div>
+        </div>
+
+        <div class="bottom-container">
+            <div class="chart-box">
+                <h2>📊 异常类型分布</h2>
+                <div id="typeDistribution"></div>
+            </div>
+            <div class="alerts-table">
+                <h2>🔔 最近告警</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>用户</th>
+                            <th>类型</th>
+                            <th>严重程度</th>
+                            <th>消息</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rateChart, topUsersChart, typeDistributionChart;
+        let ws;
+        const WS_URL = 'ws://' + window.location.hostname + ':8080/ws/alerts';
+        const API_BASE = 'http://' + window.location.hostname + ':8080/api';
+
+        function initCharts() {
+            rateChart = echarts.init(document.getElementById('rateChart'), 'dark');
+            topUsersChart = echarts.init(document.getElementById('topUsersChart'), 'dark');
+            typeDistributionChart = echarts.init(document.getElementById('typeDistribution'), 'dark');
+
+            const rateOption = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' }
+                },
+                legend: {
+                    data: ['异常率(%)', '告警数',
+                    textStyle: { color: '#ccc' }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: [],
+                    axisLine: { lineStyle: { color: '#444' }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '异常率(%)',
+                        min: 0,
+                        axisLine: { lineStyle: { color: '#444' } },
+                        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    {
+                        type: 'value',
+                        name: '告警数',
+                        min: 0,
+                        axisLine: { lineStyle: { color: '#444' } },
+                        splitLine: { show: false } }
+                    }
+                ],
+                series: [
+                    {
+                        name: '异常率(%)',
+                        type: 'line',
+                        smooth: true,
+                        data: [],
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(0, 212, 255, 0.5)' },
+                                    { offset: 1, color: 'rgba(0, 212, 255, 0)' }
+                                ]
+                            }
+                        },
+                        lineStyle: { color: '#00d4ff', width: 2 },
+                        itemStyle: { color: '#00d4ff' }
+                    },
+                    {
+                        name: '告警数',
+                        type: 'bar',
+                        yAxisIndex: 1,
+                        data: [],
+                        itemStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(255, 107, 107, 0.8)' },
+                                    { offset: 1, color: 'rgba(255, 107, 107, 0.2)' }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            };
+
+            const topUsersOption = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    axisLine: { lineStyle: { color: '#444' } },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: [],
+                    axisLine: { lineStyle: { color: '#444' } }
+                },
+                series: [{
+                    type: 'bar',
+                    data: [],
+                    itemStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 1, y2: 0,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(123, 47, 247, 0.8)' },
+                                { offset: 1, color: 'rgba(123, 47, 247, 0.2)' }
+                            ]
+                        },
+                        borderRadius: [0, 4, 4, 0]
+                    }
+                }]
+            };
+
+            const typeOption = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    borderColor: '#333',
+                    textStyle: { color: '#fff' }
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: '5%',
+                    top: 'center',
+                    textStyle: { color: '#ccc' }
+                },
+                series: [{
+                    name: '异常类型',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#1a1a2e',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        color: '#ccc'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 16,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: {
+                        show: true,
+                        length: 20,
+                        length2: 10
+                    },
+                    data: []
+                }],
+                color: ['#ff6b6b', '#ffd93d', '#7b2ff7', '#00d4ff']
+            };
+
+            rateChart.setOption(rateOption);
+            topUsersChart.setOption(topUsersOption);
+            typeDistributionChart.setOption(typeOption);
+
+            window.addEventListener('resize', () => {
+                rateChart.resize();
+                topUsersChart.resize();
+                typeDistributionChart.resize();
+            });
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalAlerts').textContent = data.totalAlerts.toLocaleString();
+
+            const rateHistory = data.alertRateHistory;
+            if (rateHistory && rateHistory.length > 0) {
+                const latest = rateHistory[rateHistory.length - 1];
+                document.getElementById('currentRate').textContent = latest.alertRate + '%';
+                document.getElementById('alertsPerMinute').textContent = latest.alertCount;
+            }
+
+            const topUsers = data.topUsers;
+            document.getElementById('activeUsers').textContent = topUsers ? topUsers.length : 0;
+
+            const times = rateHistory.map(item => {
+                const time = new Date(item.time);
+                return time.getHours().toString().padStart(2, '0') + ':' +
+                       time.getMinutes().toString().padStart(2, '0');
+            });
+            const rates = rateHistory.map(item => item.alertRate);
+            const alertCounts = rateHistory.map(item => item.alertCount);
+
+            rateChart.setOption({
+                xAxis: { data: times },
+                series: [
+                    { data: rates },
+                    { data: alertCounts }
+                ]
+            });
+
+            const userNames = topUsers.map(item => item.userId);
+            const userCounts = topUsers.map(item => item.alertCount);
+
+            topUsersChart.setOption({
+                yAxis: { data: userNames.reverse() },
+                series: [{ data: userCounts.reverse() }]
+            });
+
+            const typeDistribution = data.alertTypeDistribution;
+            const typeData = Object.entries(typeDistribution).map(([key, value]) => ({
+                name: getTypeName(key),
+                value: value
+            }));
+
+            typeDistributionChart.setOption({
+                series: [{ data: typeData }]
+            });
+
+            updateAlertsTable(data.recentAlerts);
+        }
+
+        function getTypeName(type) {
+            const names = {
+                'HIGH_FREQUENCY': '高频交易',
+                'SUDDEN_AMOUNT_INCREASE': '金额突增',
+                'CROSS_REGION_LOGIN': '跨地域登录',
+                'ML_ANOMALY': 'ML异常检测'
+            };
+            return names[type] || type;
+        }
+
+        function updateAlertsTable(alerts) {
+            const tbody = document.getElementById('alertsTableBody');
+            tbody.innerHTML = '';
+
+            if (!alerts || alerts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">暂无告警数据</td></tr>';
+                return;
+            }
+
+            alerts.slice(0, 15).forEach(alert => {
+                const time = new Date(alert.timestamp);
+                const timeStr = time.getHours().toString().padStart(2, '0') + ':' +
+                                 time.getMinutes().toString().padStart(2, '0') + ':' +
+                                 time.getSeconds().toString().padStart(2, '0');
+
+                const severityClass = alert.severity === 'CRITICAL' ? 'severity-critical' : 'severity-high';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td>${alert.userId}</td>
+                    <td><span class="alert-type type-${alert.alertType}">${getTypeName(alert.alertType)}</span></td>
+                    <td class="${severityClass}">${alert.severity}</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${alert.alertMessage}">${alert.alertMessage}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+
+            if (connected) {
+                statusEl.className = 'connection-status status-connected';
+                statusText.textContent = '已连接';
+            } else {
+                statusEl.className = 'connection-status status-disconnected';
+                statusText.textContent = '连接中...';
+            }
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updateStats(data);
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected. Reconnecting...');
+                updateConnectionStatus(false);
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                ws.close();
+            };
+        }
+
+        function fetchInitialData() {
+            fetch(API_BASE + '/statistics')
+                .then(response => response.json())
+                .then(data => updateStats(data))
+                .catch(error => console.error('Error fetching initial data:', error));
+
+            fetchMLModelInfo();
+        }
+
+        function fetchMLModelInfo() {
+            fetch(API_BASE + '/ml/model/info')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.version !== undefined) {
+                        document.getElementById('mlModelVersion').textContent = 'v' + data.version;
+                    }
+                })
+                .catch(error => console.error('Error fetching ML model info:', error));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            fetchInitialData();
+            connectWebSocket();
+
+            setInterval(fetchMLModelInfo, 30000);
+        });
+    </script>
+</body>
+</html>
