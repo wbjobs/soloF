@@ -1,0 +1,9 @@
+grpc_port: 50051
+http_port: 8080
+etcd_endpoints:
+  - localhost:2379
+num_workers: 3
+damping_factor: 0.85
+convergence_threshold: 0.0001
+max_iterations: 100
+graph_file: ""

@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package pagerank;
+
+option go_package = "f82/proto/pagerank";
+
+service PageRankService {
+  rpc Compute(stream ComputeRequest) returns (stream ComputeResponse);
+}
+
+message ComputeRequest {
+  oneof msg {
+    GraphPartition partition = 1;
+    GlobalRanks global_ranks = 2;
+    ControlCommand control = 3;
+    IncrementalUpdate incremental_update = 4;
+  }
+}
+
+message GraphPartition {
+  int32 partition_id = 1;
+  int32 total_partitions = 2;
+  repeated int64 local_nodes = 3;
+  repeated Edge edges = 4;
+  repeated int64 ghost_nodes = 5;
+}
+
+message Edge {
+  int64 from = 1;
+  int64 to = 2;
+}
+
+message GlobalRanks {
+  int32 iteration = 1;
+  map<int64, double> ranks = 2;
+}
+
+message IncrementalUpdate {
+  int32 iteration = 1;
+  repeated int64 affected_nodes = 2;
+  repeated Edge changed_edges = 3;
+  map<int64, double> initial_ranks = 4;
+  int32 max_propagation_level = 5;
+  bool is_incremental = 6;
+}
+
+message ControlCommand {
+  enum CommandType {
+    INIT = 0;
+    START_ITERATION = 1;
+    STOP = 2;
+    RESET = 3;
+    START_INCREMENTAL = 4;
+    COMMIT_INCREMENTAL = 5;
+    ROLLBACK_INCREMENTAL = 6;
+  }
+  CommandType type = 1;
+  double damping_factor = 2;
+  double convergence_threshold = 3;
+  int32 max_propagation_level = 4;
+}
+
+message ComputeResponse {
+  int32 partition_id = 1;
+  int32 iteration = 2;
+  map<int64, double> local_ranks = 3;
+  double local_max_delta = 4;
+  bool converged = 5;
+  string worker_id = 6;
+  bool is_incremental = 7;
+  repeated int64 updated_nodes = 8;
+  int32 affected_count = 9;
+}
+
+message WorkerInfo {
+  string worker_id = 1;
+  string address = 2;
+  int32 partition_id = 3;
+  int32 load_factor = 4;
+}

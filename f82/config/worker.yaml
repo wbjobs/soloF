@@ -1,0 +1,5 @@
+worker_id: "worker-1"
+master_addr: "localhost:50051"
+listen_addr: "0.0.0.0:50052"
+etcd_addr: "localhost:2379"
+ttl_seconds: 10

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  etcd:
+    image: bitnami/etcd:latest
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    ports:
+      - "2379:2379"
+    networks:
+      - pagerank-network
+
+  master:
+    build:
+      context: ./master
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - NUM_WORKERS=3
+    depends_on:
+      - etcd
+    networks:
+      - pagerank-network
+
+  worker-1:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - MASTER_ADDR=master:50051
+      - ETCD_ADDR=etcd:2379
+      - WORKER_PORT=50052
+    depends_on:
+      - master
+      - etcd
+    networks:
+      - pagerank-network
+
+  worker-2:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - MASTER_ADDR=master:50051
+      - ETCD_ADDR=etcd:2379
+      - WORKER_PORT=50053
+    depends_on:
+      - master
+      - etcd
+    networks:
+      - pagerank-network
+
+  worker-3:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - MASTER_ADDR=master:50051
+      - ETCD_ADDR=etcd:2379
+      - WORKER_PORT=50054
+    depends_on:
+      - master
+      - etcd
+    networks:
+      - pagerank-network
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - master
+    networks:
+      - pagerank-network
+
+networks:
+  pagerank-network:
+    driver: bridge
