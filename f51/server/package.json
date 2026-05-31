@@ -1,0 +1,32 @@
+{
+  "name": "microscope-collaboration-server",
+  "version": "1.0.0",
+  "description": "WebRTC SFU server for remote microscope collaboration",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/websockets": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.0.0",
+    "mediasoup": "^3.12.0",
+    "socket.io": "^4.7.0",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.8.0",
+    "uuid": "^9.0.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "@nestjs/schematics": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.1.0"
+  }
+}
