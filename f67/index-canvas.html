@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>神经网络可视化 - Canvas高性能版</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #e94560;
+    }
+    .subtitle {
+      text-align: center;
+      color: #a0a0a0;
+      margin-bottom: 20px;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    #canvas-wrapper {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    canvas {
+      display: block;
+      cursor: crosshair;
+    }
+    .tooltip {
+      position: absolute;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.95);
+      color: #fff;
+      border: 1px solid #e94560;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .panel {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      min-width: 220px;
+    }
+    .panel h3 {
+      margin: 0 0 15px 0;
+      color: #e94560;
+      font-size: 16px;
+    }
+    .panel-section {
+      margin-bottom: 20px;
+    }
+    .panel-section:last-child {
+      margin-bottom: 0;
+    }
+    .panel-label {
+      font-size: 13px;
+      color: #a0a0a0;
+      margin-bottom: 8px;
+    }
+    .panel-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #4ecdc4;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 12px;
+    }
+    .legend-line {
+      width: 30px;
+      height: 2px;
+      background: #e94560;
+      margin-right: 10px;
+    }
+    .legend-circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #4ecdc4;
+      margin-right: 10px;
+    }
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toggle-btn {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .toggle-btn:hover {
+      background: #444;
+    }
+    .toggle-btn.active {
+      background: #e94560;
+      border-color: #e94560;
+    }
+    .data-selector {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .data-btn {
+      flex: 1;
+      background: #2a2a4a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .data-btn:hover {
+      background: #3a3a5a;
+    }
+    .data-btn.active {
+      background: #4ecdc4;
+      color: #1a1a2e;
+      border-color: #4ecdc4;
+    }
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      color: #e94560;
+    }
+  </style>
+</head>
+<body>
+  <h1>全连接神经网络可视化</h1>
+  <p class="subtitle">Canvas高性能版本 · 支持大规模网络</p>
+  
+  <div class="container">
+    <div id="canvas-wrapper">
+      <canvas id="network-canvas" width="1000" height="700"></canvas>
+      <div class="tooltip"></div>
+      <div class="loading" id="loading" style="display: none;">正在渲染...</div>
+    </div>
+    
+    <div class="panel">
+      <div class="panel-section">
+        <h3>网络统计</h3>
+        <div class="panel-label">神经元总数</div>
+        <div class="panel-value" id="total-neurons">0</div>
+        <div class="panel-label" style="margin-top: 10px;">连接总数</div>
+        <div class="panel-value" id="total-connections">0</div>
+        <div class="panel-label" style="margin-top: 10px;">渲染帧率</div>
+        <div class="panel-value" id="fps">0 FPS</div>
+      </div>
+      
+      <div class="panel-section">
+        <h3>显示选项</h3>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="toggle-nodes">显示神经元</button>
+          <button class="toggle-btn active" id="toggle-connections">显示连接</button>
+          <button class="toggle-btn" id="toggle-labels">显示标签</button>
+          <button class="toggle-btn" id="toggle-weight-color">权重颜色编码</button>
+        </div>
+      </div>
+      
+      <div class="panel-section">
+        <h3>测试数据</h3>
+        <div class="data-selector">
+          <button class="data-btn active" data-file="network.json">小型</button>
+          <button class="data-btn" data-file="network-large.json">大型</button>
+          <button class="data-btn" data-file="network-huge.json">超大型</button>
+        </div>
+      </div>
+      
+      <div class="panel-section">
+        <h3>图例</h3>
+        <div class="legend-item">
+          <div class="legend-circle"></div>
+          <span>神经元节点</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="height: 1px;"></div>
+          <span>权重较小</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="height: 5px;"></div>
+          <span>权重较大</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background: #ffc800;"></div>
+          <span>相关连接（悬停时）</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const canvas = document.getElementById('network-canvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.querySelector('.tooltip');
+    const loading = document.getElementById('loading');
+    
+    const state = {
+      nodes: [],
+      links: [],
+      layers: [],
+      hoveredNode: null,
+      hoveredLink: null,
+      showNodes: true,
+      showConnections: true,
+      showLabels: false,
+      weightColorCoding: false,
+      weightScale: null,
+      colorScale: null,
+      nodeRadius: 8,
+      animationId: null,
+      lastTime: 0,
+      frameCount: 0,
+      fps: 0
+    };
+    
+    const layerColors = ['#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe'];
+    
+    function init(data) {
+      state.layers = data.layers;
+      state.nodes = [];
+      state.links = [];
+      
+      const width = canvas.width;
+      const height = canvas.height;
+      const margin = { top: 60, right: 60, bottom: 60, left: 60 };
+      
+      const layerSpacing = (width - margin.left - margin.right) / (data.layers.length - 1);
+      
+      data.layers.forEach((layer, layerIndex) => {
+        const neuronCount = layer.neurons;
+        const layerHeight = (height - margin.top - margin.bottom);
+        const neuronSpacing = layerHeight / (neuronCount + 1);
+        
+        for (let i = 0; i < neuronCount; i++) {
+          state.nodes.push({
+            layer: layerIndex,
+            layerName: layer.name,
+            index: i,
+            x: margin.left + layerIndex * layerSpacing,
+            y: margin.top + (i + 1) * neuronSpacing,
+            id: `${layerIndex}-${i}`,
+            radius: state.nodeRadius
+          });
+        }
+      });
+      
+      data.weights.forEach((layerWeights, layerIndex) => {
+        layerWeights.forEach((neuronWeights, fromNeuron) => {
+          neuronWeights.forEach((weight, toNeuron) => {
+            const source = state.nodes.find(n => n.id === `${layerIndex}-${fromNeuron}`);
+            const target = state.nodes.find(n => n.id === `${layerIndex + 1}-${toNeuron}`);
+            if (source && target) {
+              state.links.push({ source, target, weight });
+            }
+          });
+        });
+      });
+      
+      const maxWeight = d3.max(state.links, d => Math.abs(d.weight));
+      state.weightScale = d3.scaleLinear()
+        .domain([0, maxWeight])
+        .range([0.3, 4]);
+      
+      state.colorScale = d3.scaleOrdinal()
+        .domain(data.layers.map(l => l.name))
+        .range(layerColors);
+      
+      state.nodeRadius = Math.max(3, Math.min(10, 120 / Math.sqrt(d3.max(data.layers, l => l.neurons))));
+      
+      document.getElementById('total-neurons').textContent = state.nodes.length.toLocaleString();
+      document.getElementById('total-connections').textContent = state.links.length.toLocaleString();
+      
+      if (state.animationId) cancelAnimationFrame(state.animationId);
+      render();
+    }
+    
+    function drawConnections() {
+      if (!state.showConnections) return;
+      
+      ctx.lineCap = 'round';
+      
+      for (let i = 0; i < state.links.length; i++) {
+        const link = state.links[i];
+        const isLinkHovered = link === state.hoveredLink;
+        const isConnectedToHoveredNode = state.hoveredNode && 
+          (link.source.id === state.hoveredNode.id || link.target.id === state.hoveredNode.id);
+        
+        const isHighlighted = isLinkHovered || isConnectedToHoveredNode;
+        const isDimmed = state.hoveredNode && !isConnectedToHoveredNode && !isLinkHovered;
+        
+        ctx.beginPath();
+        ctx.moveTo(link.source.x, link.source.y);
+        ctx.lineTo(link.target.x, link.target.y);
+        
+        const lineWidth = state.weightScale(Math.abs(link.weight)) * (isHighlighted ? 2 : 1);
+        ctx.lineWidth = lineWidth;
+        
+        let baseAlpha = 0.35;
+        if (isHighlighted) baseAlpha = 1;
+        else if (isDimmed) baseAlpha = 0.08;
+        
+        if (state.weightColorCoding) {
+          const hue = link.weight > 0 ? 120 : 0;
+          ctx.strokeStyle = `hsla(${hue}, 80%, 50%, ${baseAlpha})`;
+        } else {
+          if (isConnectedToHoveredNode && !isLinkHovered) {
+            ctx.strokeStyle = `rgba(255, 200, 0, ${baseAlpha})`;
+          } else {
+            ctx.strokeStyle = `rgba(233, 69, 96, ${baseAlpha})`;
+          }
+        }
+        
+        ctx.stroke();
+      }
+    }
+    
+    function drawNodes() {
+      if (!state.showNodes) return;
+      
+      for (let i = 0; i < state.nodes.length; i++) {
+        const node = state.nodes[i];
+        const isHovered = node === state.hoveredNode;
+        const radius = isHovered ? node.radius * 1.5 : node.radius;
+        
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = state.colorScale(node.layerName);
+        ctx.fill();
+        
+        ctx.strokeStyle = isHovered ? '#fff' : 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = isHovered ? 2 : 1;
+        ctx.stroke();
+        
+        if (state.showLabels && node.radius >= 6) {
+          ctx.fillStyle = '#fff';
+          ctx.font = `${Math.max(8, node.radius - 2)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${node.index + 1}`, node.x, node.y);
+        }
+      }
+    }
+    
+    function drawLayerLabels() {
+      const margin = { top: 60, right: 60, bottom: 60, left: 60 };
+      const layerSpacing = (canvas.width - margin.left - margin.right) / (state.layers.length - 1);
+      
+      ctx.fillStyle = '#e94560';
+      ctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      state.layers.forEach((layer, i) => {
+        ctx.fillText(layer.name, margin.left + i * layerSpacing, 30);
+      });
+    }
+    
+    function render() {
+      state.frameCount++;
+      const now = performance.now();
+      if (now - state.lastTime >= 1000) {
+        state.fps = state.frameCount;
+        state.frameCount = 0;
+        state.lastTime = now;
+        document.getElementById('fps').textContent = `${state.fps} FPS`;
+      }
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      drawConnections();
+      drawNodes();
+      drawLayerLabels();
+      
+      state.animationId = requestAnimationFrame(render);
+    }
+    
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+    
+    function findNearestNode(pos) {
+      let nearest = null;
+      let minDist = Infinity;
+      
+      for (const node of state.nodes) {
+        const dx = node.x - pos.x;
+        const dy = node.y - pos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < node.radius * 2 && dist < minDist) {
+          minDist = dist;
+          nearest = node;
+        }
+      }
+      
+      return nearest;
+    }
+    
+    function findNearestLink(pos) {
+      let nearest = null;
+      let minDist = 15;
+      
+      for (const link of state.links) {
+        const A = link.source;
+        const B = link.target;
+        
+        const ABx = B.x - A.x;
+        const ABy = B.y - A.y;
+        const APx = pos.x - A.x;
+        const APy = pos.y - A.y;
+        
+        const ab2 = ABx * ABx + ABy * ABy;
+        const ap_ab = APx * ABx + APy * ABy;
+        let t = ap_ab / ab2;
+        
+        t = Math.max(0, Math.min(1, t));
+        
+        const closestX = A.x + t * ABx;
+        const closestY = A.y + t * ABy;
+        
+        const dx = pos.x - closestX;
+        const dy = pos.y - closestY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = link;
+        }
+      }
+      
+      return nearest;
+    }
+    
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getMousePos(e);
+      
+      state.hoveredNode = findNearestNode(pos);
+      
+      if (state.hoveredNode) {
+        tooltip.style.opacity = 1;
+        tooltip.innerHTML = `层: ${state.hoveredNode.layerName}<br>神经元: ${state.hoveredNode.index + 1}`;
+        tooltip.style.left = (e.offsetX + 15) + 'px';
+        tooltip.style.top = (e.offsetY - 10) + 'px';
+        state.hoveredLink = null;
+      } else {
+        state.hoveredLink = findNearestLink(pos);
+        
+        if (state.hoveredLink) {
+          tooltip.style.opacity = 1;
+          tooltip.innerHTML = `权重值: ${state.hoveredLink.weight.toFixed(4)}`;
+          tooltip.style.left = (e.offsetX + 15) + 'px';
+          tooltip.style.top = (e.offsetY - 10) + 'px';
+        } else {
+          tooltip.style.opacity = 0;
+        }
+      }
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      state.hoveredNode = null;
+      state.hoveredLink = null;
+      tooltip.style.opacity = 0;
+    });
+    
+    document.getElementById('toggle-nodes').addEventListener('click', function() {
+      state.showNodes = !state.showNodes;
+      this.classList.toggle('active', state.showNodes);
+    });
+    
+    document.getElementById('toggle-connections').addEventListener('click', function() {
+      state.showConnections = !state.showConnections;
+      this.classList.toggle('active', state.showConnections);
+    });
+    
+    document.getElementById('toggle-labels').addEventListener('click', function() {
+      state.showLabels = !state.showLabels;
+      this.classList.toggle('active', state.showLabels);
+    });
+    
+    document.getElementById('toggle-weight-color').addEventListener('click', function() {
+      state.weightColorCoding = !state.weightColorCoding;
+      this.classList.toggle('active', state.weightColorCoding);
+    });
+    
+    document.querySelectorAll('.data-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.data-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const file = this.getAttribute('data-file');
+        loading.style.display = 'block';
+        
+        setTimeout(() => {
+          d3.json(file).then(data => {
+            init(data);
+            loading.style.display = 'none';
+          }).catch(err => {
+            loading.style.display = 'none';
+            alert('无法加载数据文件: ' + file);
+          });
+        }, 50);
+      });
+    });
+    
+    d3.json('network.json').then(init);
+  </script>
+</body>
+</html>
