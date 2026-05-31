@@ -1,0 +1,92 @@
+type Node @auth(
+  query: { rule: """
+    query ($owner: String!) {
+      queryNode(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """},
+  add: { rule: """
+    query ($owner: String!) {
+      queryNode(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """},
+  delete: { rule: """
+    query ($owner: String!) {
+      queryNode(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """}
+) {
+  id: ID!
+  name: String! @search(by: [hash, term])
+  owner: String! @search(by: [hash])
+  outEdges: [Edge] @hasInverse(field: from)
+  inEdges: [Edge] @hasInverse(field: to)
+}
+
+type Edge @auth(
+  query: { rule: """
+    query ($owner: String!) {
+      queryEdge(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """},
+  add: { rule: """
+    query ($owner: String!) {
+      queryEdge(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """},
+  delete: { rule: """
+    query ($owner: String!) {
+      queryEdge(filter: { owner: { eq: $owner } }) {
+        uid
+      }
+    }
+  """}
+) {
+  id: ID!
+  from: Node!
+  to: Node!
+  owner: String! @search(by: [hash])
+  weight: Float @default(value: 1.0)
+}
+
+type User @auth(
+  query: { rule: """
+    query ($username: String!) {
+      queryUser(filter: { username: { eq: $username } }) {
+        username
+      }
+    }
+  """},
+  add: { rule: "{$role: { eq: \"admin\" }}" }
+) {
+  username: String! @id
+  password: String!
+  role: String! @default(value: "user")
+}
+
+type JWTHeader @cacheControl(maxAge: 0) {
+  alg: String!
+  typ: String
+}
+
+type JWTPayload @cacheControl(maxAge: 0) {
+  sub: String!
+  username: String!
+  tenant: String!
+  role: String
+  iat: Int
+  exp: Int
+}
+
+directive @hasInverse(field: String!) on FIELD_DEFINITION
+
+directive @cascade(fields: [String!]) on FIELD | QUERY | MUTATION

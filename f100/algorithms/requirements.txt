@@ -1,0 +1,12 @@
+grpcio>=1.59.0
+grpcio-tools>=1.59.0
+protobuf>=4.25.0
+celery>=5.3.4
+redis>=5.0.1
+networkx>=3.2.1
+python-louvain>=0.16
+numpy>=1.26.0
+pydgraph>=23.1.0
+python-dotenv>=1.0.0
+RestrictedPython>=7.0
+docker>=6.1.3

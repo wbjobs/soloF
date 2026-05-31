@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  zero:
+    image: dgraph/dgraph:v23.1.0
+    volumes:
+      - dgraph-zero:/dgraph
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    command: dgraph zero --my=zero:5080
+
+  alpha:
+    image: dgraph/dgraph:v23.1.0
+    volumes:
+      - dgraph-alpha:/dgraph
+      - ./schema:/schema
+    ports:
+      - "8080:8080"
+      - "9080:9080"
+    command: >
+      dgraph alpha --my=alpha:7080 --zero=zero:5080
+      --security "whitelist=0.0.0.0/0"
+      --graphql "port=8080; debug=true"
+      --schema /schema/schema.graphql
+    depends_on:
+      - zero
+
+  ratel:
+    image: dgraph/ratel:v21.12.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - alpha
+
+volumes:
+  dgraph-zero:
+  dgraph-alpha:

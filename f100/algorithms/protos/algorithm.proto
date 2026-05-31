@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package algorithm;
+
+service AlgorithmService {
+  rpc ExecuteAlgorithm(ExecuteAlgorithmRequest) returns (ExecuteAlgorithmResponse);
+  rpc GetAlgorithmStatus(GetAlgorithmStatusRequest) returns (GetAlgorithmStatusResponse);
+  rpc CancelAlgorithm(CancelAlgorithmRequest) returns (CancelAlgorithmResponse);
+  rpc ListAlgorithms(ListAlgorithmsRequest) returns (ListAlgorithmsResponse);
+  rpc GetTaskHistory(GetTaskHistoryRequest) returns (GetTaskHistoryResponse);
+}
+
+message ExecuteAlgorithmRequest {
+  string task_id = 1;
+  string tenant = 2;
+  string algorithm_name = 3;
+  string algorithm_type = 4;
+  string script_content = 5;
+  map<string, string> parameters = 6;
+}
+
+message ExecuteAlgorithmResponse {
+  string task_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+message GetAlgorithmStatusRequest {
+  string task_id = 1;
+}
+
+message GetAlgorithmStatusResponse {
+  string task_id = 1;
+  string status = 2;
+  string result_json = 3;
+  string error = 4;
+  double progress = 5;
+  int64 started_at = 6;
+  int64 completed_at = 7;
+}
+
+message CancelAlgorithmRequest {
+  string task_id = 1;
+}
+
+message CancelAlgorithmResponse {
+  string task_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message ListAlgorithmsRequest {
+}
+
+message ListAlgorithmsResponse {
+  repeated AlgorithmInfo algorithms = 1;
+}
+
+message AlgorithmInfo {
+  string name = 1;
+  string type = 2;
+  string description = 3;
+  map<string, ParameterInfo> parameters = 4;
+}
+
+message ParameterInfo {
+  string name = 1;
+  string type = 2;
+  string default_value = 3;
+  string description = 4;
+}
+
+message GetTaskHistoryRequest {
+  string tenant = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetTaskHistoryResponse {
+  repeated TaskInfo tasks = 1;
+  int32 total = 2;
+}
+
+message TaskInfo {
+  string task_id = 1;
+  string algorithm_name = 2;
+  string algorithm_type = 3;
+  string status = 4;
+  string result_json = 5;
+  string error = 6;
+  map<string, string> parameters = 7;
+  int64 created_at = 8;
+  int64 started_at = 9;
+  int64 completed_at = 10;
+}
